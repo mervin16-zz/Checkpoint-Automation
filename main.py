@@ -1,26 +1,50 @@
 from cpapi import APIClient, APIClientArgs
 import json
 
-
+# Publish the session to the SMS
 def publish(client):
-    response = client.api_call(
-        "publish", {})
+    response = client.api_call("publish", {})
+    response_logger(response, "Session published successfully.")
 
-    if response.success == False:
-        print('An error occurred while publishing')
-        exit(1)
+
+# Checks if the response is
+# successful or not
+def response_logger(response, successMessage):
+    if response.success:
+        if successMessage is not None:
+            print(successMessage)
+        return True
     else:
-        print("Session published successfully.")
-
-
-def generic_group_uid(client):
-    response = client.api_call(
-        "show-generic-objects", {"name": "MyTestUserGroup"})
-
-    if response.success == False:
-        print(response)
+        print(response.error_message)
         exit(1)
-    else:
+
+
+# Creates a user and returns
+# it uid
+def create_user(client, name, password):
+    response = client.api_call(
+        "add-generic-object",
+        {
+            "name": name,
+            "create": "com.checkpoint.objects.classes.dummy.CpmiUser",
+            "authMethod": "INTERNAL_PASSWORD",
+            "internalPassword": password,
+        },
+    )
+
+    if response_logger(response, None):
+        jsondata = json.loads(json.dumps(response.data))
+        return jsondata["uid"]
+
+
+# Retrieve desired group and
+# returns the group uid
+def get_group(client, groupName):
+    response = client.api_call("show-generic-objects", {"name": groupName},)
+
+    isSuccess = response_logger(response, "searching for group...")
+
+    if isSuccess:
         jsondata = json.loads(json.dumps(response.data))
 
         for i in range(len(jsondata["objects"])):
@@ -28,59 +52,45 @@ def generic_group_uid(client):
             return obj["uid"]
 
 
-def generic_user_uid(client):
-    response_user = client.api_call(
-        "add-generic-object", {"name": "genericuser12",
-                               "create": "com.checkpoint.objects.classes.dummy.CpmiUser",
-                               "authMethod": "INTERNAL_PASSWORD",
-                               "internalPassword": "testpassword", })
-
-    if response_user.success == False:
-        print(response_user)
-        exit(1)
-    else:
-        jsondata = json.loads(json.dumps(response_user.data))
-        return jsondata["uid"]
-
-
-def set_user_to_group(client, uuid, guid):
+# Assigns user to group
+def assign_user_to_group(client, uuid, guid):
     response = client.api_call(
-        "set-generic-object", {"uid": guid, "emptyFieldName": {"add": uuid}})
-
-    if response.success == False:
-        print(response)
-        exit(1)
-    else:
-        print("success")
+        "set-generic-object", {"uid": guid, "emptyFieldName": {"add": uuid}}
+    )
+    response_logger(response, "User has been added to group")
 
 
 def main():
-    ########################
-    # Credentials
+    # SMS Credentials
     sms_ip = "172.17.168.101"
     sms_username = "test1"
     sms_password = "1234"
 
-    # initialize SMS session
+    # Initialize the SMS session
     client_args = APIClientArgs(server=sms_ip, api_version=1.1)
 
     with APIClient(client_args) as client:
-        # login to server:
+        # Login to server:
         login_res = client.login(sms_username, sms_password)
+
+        # If login is not successful, print the error message.
         if login_res.success is False:
             print(
-                "Login failed. Please check SMS version (this script works only with R80.xx)")
+                "Login failed. Please check SMS version (this script works only with R80.xx)"
+            )
             exit(1)
         else:
-            print('login success to: %s', sms_ip)
+            print("Successfully connected to: {}".format(sms_ip))
 
-            guid = generic_group_uid(client)
-            uuid = generic_user_uid(client)
-
-            set_user_to_group(client, uuid, guid)
-
+            # Creates the user and return the UID
+            uuid = create_user(client, "Mervin Hemaraju", "12345")
+            # Fetches the group UID
+            guid = get_group(client, "MyTestUserGroup")
+            # Assign user to group
+            assign_user_to_group(client, uuid, guid)
+            # Publish the session
             publish(client)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
