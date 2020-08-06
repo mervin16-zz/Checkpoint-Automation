@@ -71,7 +71,6 @@ def get_user(client, name, password):
 # If group exists, return uid
 # If not, create group and return uid
 def get_group(client, name):
-
     response = client.api_call("show-generic-objects", {"name": name},)
 
     isSuccess = response_logger(response, "searching for group...")
@@ -106,6 +105,7 @@ def main():
     sms_ip = "172.17.168.101"
     sms_username = "test2"
     sms_password = "1234"
+    groups = ["group1", "group2", "group3"]
 
     try:
         # Initialize the SMS session
@@ -125,9 +125,10 @@ def main():
 
                 uuid = get_user(client, "Islam", "riazislam@linkbynet")
 
-                guid = get_group(client, "Linkbynet".replace(" ", ""))
-
-                assign_user_to_group(client, uuid, guid)
+                for i in range(len(groups)):
+                    group = groups[i]
+                    guid = get_group(client, group)
+                    assign_user_to_group(client, uuid, guid)
 
                 # Publish the session
                 publish(client)
