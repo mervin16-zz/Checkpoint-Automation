@@ -16,7 +16,6 @@ def response_logger(response, successMessage):
         return True
     else:
         raise Exception(response.error_message)
-        exit(1)
 
 
 # Creates a user and returns
@@ -37,10 +36,43 @@ def create_user(client, name, password):
         return jsondata["uid"]
 
 
-# Retrieve desired group and
-# returns the group uid
-def get_group(client, groupName):
-    response = client.api_call("show-generic-objects", {"name": groupName},)
+# Creates a user group and returns its uid
+def create_group(client, name):
+    response = client.api_call(
+        "add-generic-object",
+        {"name": name, "create": "com.checkpoint.objects.classes.dummy.CpmiUserGroup"},
+    )
+
+    if response_logger(response, None):
+        jsondata = json.loads(json.dumps(response.data))
+        return jsondata["uid"]
+
+
+# Check if user already exists
+# If user exists, return uid
+# If not, create user and return uid
+def get_user(client, name, password):
+
+    response = client.api_call("show-generic-objects", {"name": name},)
+
+    isSuccess = response_logger(response, "searching for user...")
+
+    if isSuccess:
+        jsondata = json.loads(json.dumps(response.data))
+
+        if len(jsondata["objects"]) == 0:
+            # Create user
+            return create_user(client, name, password)
+        else:
+            return retrieve_uid_from_array(jsondata)
+
+
+# Check if group already exists
+# If group exists, return uid
+# If not, create group and return uid
+def get_group(client, name):
+
+    response = client.api_call("show-generic-objects", {"name": name},)
 
     isSuccess = response_logger(response, "searching for group...")
 
@@ -48,13 +80,17 @@ def get_group(client, groupName):
         jsondata = json.loads(json.dumps(response.data))
 
         if len(jsondata["objects"]) == 0:
-            raise Exception(
-                "There are no user gorups with the name {}".format(groupName)
-            )
+            # Create group
+            return create_group(client, name)
         else:
-            for i in range(len(jsondata["objects"])):
-                obj = jsondata["objects"][i]
-                return obj["uid"]
+            return retrieve_uid_from_array(jsondata)
+
+
+# Retrieve uid from array
+def retrieve_uid_from_array(jsondata):
+    for i in range(len(jsondata["objects"])):
+        obj = jsondata["objects"][i]
+        return obj["uid"]
 
 
 # Assigns user to group
@@ -68,7 +104,7 @@ def assign_user_to_group(client, uuid, guid):
 def main():
     # SMS Credentials
     sms_ip = "172.17.168.101"
-    sms_username = "test1"
+    sms_username = "test2"
     sms_password = "1234"
 
     try:
@@ -87,12 +123,12 @@ def main():
             else:
                 print("Successfully connected to: {}".format(sms_ip))
 
-                # Creates the user and return the UID
-                uuid = create_user(client, "Mervin Hemaraju", "12345")
-                # Fetches the group UID
-                guid = get_group(client, "MyTestUserGroup")
-                # Assign user to group
+                uuid = get_user(client, "Islam", "riazislam@linkbynet")
+
+                guid = get_group(client, "Linkbynet".replace(" ", ""))
+
                 assign_user_to_group(client, uuid, guid)
+
                 # Publish the session
                 publish(client)
     except Exception as e:
