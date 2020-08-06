@@ -15,7 +15,7 @@ def response_logger(response, successMessage):
             print(successMessage)
         return True
     else:
-        print(response.error_message)
+        raise Exception(response.error_message)
         exit(1)
 
 
@@ -47,9 +47,14 @@ def get_group(client, groupName):
     if isSuccess:
         jsondata = json.loads(json.dumps(response.data))
 
-        for i in range(len(jsondata["objects"])):
-            obj = jsondata["objects"][i]
-            return obj["uid"]
+        if len(jsondata["objects"]) == 0:
+            raise Exception(
+                "There are no user gorups with the name {}".format(groupName)
+            )
+        else:
+            for i in range(len(jsondata["objects"])):
+                obj = jsondata["objects"][i]
+                return obj["uid"]
 
 
 # Assigns user to group
@@ -66,30 +71,33 @@ def main():
     sms_username = "test1"
     sms_password = "1234"
 
-    # Initialize the SMS session
-    client_args = APIClientArgs(server=sms_ip, api_version=1.1)
+    try:
+        # Initialize the SMS session
+        client_args = APIClientArgs(server=sms_ip, api_version=1.1)
 
-    with APIClient(client_args) as client:
-        # Login to server:
-        login_res = client.login(sms_username, sms_password)
+        with APIClient(client_args) as client:
+            # Login to server:
+            login_res = client.login(sms_username, sms_password)
 
-        # If login is not successful, print the error message.
-        if login_res.success is False:
-            print(
-                "Login failed. Please check SMS version (this script works only with R80.xx)"
-            )
-            exit(1)
-        else:
-            print("Successfully connected to: {}".format(sms_ip))
+            # If login is not successful, print the error message.
+            if login_res.success is False:
+                raise Exception(
+                    "Login failed. Please check SMS version (this script works only with R80.xx)"
+                )
+            else:
+                print("Successfully connected to: {}".format(sms_ip))
 
-            # Creates the user and return the UID
-            uuid = create_user(client, "Mervin Hemaraju", "12345")
-            # Fetches the group UID
-            guid = get_group(client, "MyTestUserGroup")
-            # Assign user to group
-            assign_user_to_group(client, uuid, guid)
-            # Publish the session
-            publish(client)
+                # Creates the user and return the UID
+                uuid = create_user(client, "Mervin Hemaraju", "12345")
+                # Fetches the group UID
+                guid = get_group(client, "MyTestUserGroup")
+                # Assign user to group
+                assign_user_to_group(client, uuid, guid)
+                # Publish the session
+                publish(client)
+    except Exception as e:
+        print("An internal error occurred. Error: {}".format(e))
+        exit(1)
 
 
 if __name__ == "__main__":
