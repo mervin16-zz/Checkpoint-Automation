@@ -1,5 +1,7 @@
 from cpapi import APIClient, APIClientArgs
 import json
+import random
+import string
 
 # Publish the session to the SMS
 def publish(client):
@@ -100,14 +102,33 @@ def assign_user_to_group(client, uuid, guid):
     response_logger(response, "User has been added to group")
 
 
+# Generate password from email
+def generate_password(email):
+    password = email[0:3]
+    password = (
+        password
+        + str(random.choice(string.digits))
+        + str(random.choice(string.digits))
+        + str(random.choice(string.digits))
+        + str(random.choice(string.punctuation))
+    )
+    return password
+
+
 def main():
-    # SMS Credentials
-    sms_ip = "172.17.168.101"
-    sms_username = "test2"
-    sms_password = "1234"
-    groups = ["group1", "group2", "group3"]
 
     try:
+        # SMS Credentials
+        sms_ip = "172.17.168.101"
+        sms_username = "test2"
+        sms_password = "1234"
+
+        # User & Group Data
+        groups = ["group1", "group2", "group3"]
+        user_name = "Mervin Hemaraju"
+        user_email = "mhemaraju@company.com"
+        user_password = generate_password(email)
+
         # Initialize the SMS session
         client_args = APIClientArgs(server=sms_ip, api_version=1.1)
 
@@ -123,15 +144,22 @@ def main():
             else:
                 print("Successfully connected to: {}".format(sms_ip))
 
-                uuid = get_user(client, "Islam", "riazislam@linkbynet")
+                # Get the user uid
+                uuid = get_user(client, user_name, user_password)
 
+                # iterate through all groups
                 for i in range(len(groups)):
                     group = groups[i]
+
+                    # Get the group uid
                     guid = get_group(client, group)
+
+                    # Assign the user to group
                     assign_user_to_group(client, uuid, guid)
 
                 # Publish the session
                 publish(client)
+
     except Exception as e:
         print("An internal error occurred. Error: {}".format(e))
         exit(1)
