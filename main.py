@@ -2,6 +2,7 @@ from cpapi import APIClient, APIClientArgs
 import json
 import random
 import string
+import pandas as pd
 
 # Publish the session to the SMS
 def publish(client):
@@ -57,7 +58,7 @@ def get_user(client, name, password):
 
     response = client.api_call("show-generic-objects", {"name": name},)
 
-    isSuccess = response_logger(response, "searching for user...")
+    isSuccess = response_logger(response, "searching for user {}".format(name))
 
     if isSuccess:
         jsondata = json.loads(json.dumps(response.data))
@@ -75,7 +76,7 @@ def get_user(client, name, password):
 def get_group(client, name):
     response = client.api_call("show-generic-objects", {"name": name},)
 
-    isSuccess = response_logger(response, "searching for group...")
+    isSuccess = response_logger(response, "searching for group {}".format(name))
 
     if isSuccess:
         jsondata = json.loads(json.dumps(response.data))
@@ -115,19 +116,24 @@ def generate_password(email):
     return password
 
 
+# Extract the user name from email
+def generate_user_name(email):
+    return email.split("@")[0]
+
+
 def main():
 
     try:
+        # Read from file
+        dataframe = pd.read_excel("User-Mobility-Test.xlsx")
+        dataframe_username = pd.DataFrame(dataframe, columns=["User Name"])
+        dataframe_email = pd.DataFrame(dataframe, columns=["User Email"])
+        dataframe_groups = pd.DataFrame(dataframe, columns=["Groups"])
+
         # SMS Credentials
         sms_ip = "172.17.168.101"
         sms_username = "test2"
         sms_password = "1234"
-
-        # User & Group Data
-        groups = ["group1", "group2", "group3"]
-        user_name = "Mervin Hemaraju"
-        user_email = "mhemaraju@company.com"
-        user_password = generate_password(email)
 
         # Initialize the SMS session
         client_args = APIClientArgs(server=sms_ip, api_version=1.1)
@@ -144,18 +150,25 @@ def main():
             else:
                 print("Successfully connected to: {}".format(sms_ip))
 
-                # Get the user uid
-                uuid = get_user(client, user_name, user_password)
+                for index, row in dataframe.iterrows():
+                    # User & Group Data
+                    groups = (row["Groups"]).split(";")
+                    user_email = row["User Email"]
+                    user_name = generate_user_name(user_email)
+                    user_password = generate_password(user_email)
 
-                # iterate through all groups
-                for i in range(len(groups)):
-                    group = groups[i]
+                    # Get the user uid
+                    uuid = get_user(client, user_name, user_password)
 
-                    # Get the group uid
-                    guid = get_group(client, group)
+                    # iterate through all groups
+                    for i in range(len(groups)):
+                        group = groups[i]
 
-                    # Assign the user to group
-                    assign_user_to_group(client, uuid, guid)
+                        # Get the group uid
+                        guid = get_group(client, group)
+
+                        # Assign the user to group
+                        assign_user_to_group(client, uuid, guid)
 
                 # Publish the session
                 publish(client)
