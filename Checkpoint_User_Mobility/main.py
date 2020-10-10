@@ -1,17 +1,12 @@
+from os import name
 from cpapi import APIClient, APIClientArgs
 import json
 import pandas as pd
 from user import User
+from settings import Settings
 
 # FIXME("Remove when done with project")
 import traceback
-
-# Data that should be moved to a file
-# SMS Credentials
-sms_ip = "172.30.43.150"
-sms_username = "api"
-sms_password = "ptc686grt09"
-api_version = 1.1
 
 
 ###################################
@@ -92,23 +87,31 @@ def create_group(client, name):
         return jsondata["uid"]
 
 
-def get_user(client, name, password):
-    # Check if user already exists
-    # If user exists, return uid
-    # If not, create user and return uid
+def get_user_data(client, name):
+    # This functions checks if the user
+    # exists or not
     response = client.api_call("show-generic-objects", {"name": name},)
 
     isSuccess = response_logger(response, "Processing user {}".format(name))
 
     if isSuccess:
-        jsondata = json.loads(json.dumps(response.data))
+        return json.loads(json.dumps(response.data))
+    else:
+        raise Exception("An error occured while getting the user {}".format(name))
 
-        if len(jsondata["objects"]) == 0:
-            # Create user
-            return create_user(client, name, password)
-        else:
-            # Return uid of existing user
-            return retrieve_uid_from_array(jsondata)
+
+def get_user(client, name, password):
+    # Check if user already exists
+    # If user exists, return uid
+    # If not, create user and return uid
+    jsondata = get_user_data(client, name)
+
+    if len(jsondata["objects"]) == 0:
+        # Create user
+        return create_user(client, name, password)
+    else:
+        # Return uid of existing user
+        return retrieve_uid_from_array(jsondata)
 
 
 def get_group(client, name):
@@ -154,7 +157,8 @@ def action_checker(client, user):
         # iterate through all groups
         for i in range(len(user.groups)):
             # get group name individually
-            group = user.groups[i]
+            # removes all whitespaces as not allowed in checkpoint for User groups
+            group = (user.groups[i]).replace(" ", "")
 
             # If group name is NOT empty
             # we continue the assignment
@@ -165,9 +169,14 @@ def action_checker(client, user):
                 # Assign the user to group
                 assign_user_to_group(client, uuid, guid)
     elif user.action.upper() == ACTION_DELETE.upper():
-        # FIXME("If user doesn't exists it will create it")
-        uid = get_user(client, user.name, user.password)
-        delete_user(client, uid, user.name)
+        # Returns the json data of the user
+        jsondata = get_user_data(client, user.name)
+
+        # If no objects returned
+        # user doesn't exist, thefore we don't enter if
+        if len(jsondata["objects"]) != 0:
+            uid = retrieve_uid_from_array(jsondata)
+            delete_user(client, uid, user.name)
     elif user.action.upper() == ACTION_EDIT.upper():
         display("Action is edit")
     else:
@@ -186,15 +195,19 @@ def main():
     # checkpoint api client initialization
     try:
 
+        # Get settings from Settings class
+        settings = Settings()
+
         # Read data from file
-        # TODO("file path should be in settings json")
-        dataframe = pd.read_excel("Checkpoint_User_Mobility/User-Mobility-Test.xlsx")
+        dataframe = pd.read_excel(settings.user_data_path)
         # Since blank cells return 'nan' instead of empty string
         # we replace all 'nan' with an empty string
         dataframe = dataframe.fillna("")
 
         # Initialize the SMS session
-        client_args = APIClientArgs(server=sms_ip, api_version=api_version)
+        client_args = APIClientArgs(
+            server=settings.sms_ip, api_version=settings.api_version
+        )
 
         with APIClient(client_args) as client:
 
@@ -202,7 +215,7 @@ def main():
             # all checkpoint operations
             try:
                 # Login to server:
-                login_res = client.login(sms_username, sms_password)
+                login_res = client.login(settings.sms_username, settings.sms_password)
 
                 # If login is not successful, log the error message.
                 if login_res.success is False:
@@ -210,7 +223,7 @@ def main():
                         "Login failed. Please check SMS version (this script works only with R80.xx)"
                     )
                 else:
-                    display("Successfully connected to: {}".format(sms_ip))
+                    display("Successfully connected to: {}".format(settings.sms_ip))
 
                     # Iterate through each row
                     # in the excel table
@@ -218,17 +231,15 @@ def main():
                     # NOT BE REMOVED
                     for index, row in dataframe.iterrows():
 
+                        # Create a User object
                         # Filter data in excel
                         # data filtered are user email, groups assigned and
                         # action need to be taken
-                        groups = str(row["Groups"]).split(";")
-                        user_email = row["User Email"]
-                        action = row["Action"]
-                        # user_name = generate_user_name(user_email)
-                        # user_password = generate_password(user_email)
-
-                        # Create a User object
-                        user = User(user_email, groups, action)
+                        user = User(
+                            row["User Email"],
+                            str(row["Groups"]).split(";"),
+                            row["Action"],
+                        )
 
                         # This is the main function which
                         # handles all the logic
