@@ -4,45 +4,36 @@ import json
 import pandas as pd
 from user import User
 from settings import Settings
+import constants as Const
 
 # FIXME("Remove when done with project")
 import traceback
 
 
-###################################
-############ Constants ############
-###################################
-# Available Actions
-ACTION_ADD = "ADD"
-ACTION_DELETE = "DELETE"
-ACTION_EDIT = "EDIT"
-
-
 ######################################
 ############ My Functions ############
 ######################################
-
-# Displays a message
 def display(message):
+    # Logs a message
     # TODO("Use a logger instead of print")
     print(message)
 
 
-# Publish the session to the SMS
 def publish(client):
+    # Publish the session to the SMS
     response = client.api_call("publish", {})
     response_logger(response, "Session published successfully.")
 
 
-# Discard the session from the SMS
 def discard(client):
+    # Discard the session from the SMS
     response = client.api_call("discard", {})
     response_logger(response, "Session has been discarded.")
 
 
-# Checks if the response is
-# successful or not
 def response_logger(response, successMessage):
+    # Checks if the response is
+    # successful or not
     if response.success:
         if successMessage is not None:
             display(successMessage)
@@ -51,15 +42,14 @@ def response_logger(response, successMessage):
         raise Exception(response.error_message)
 
 
-# Deletes a user
 def delete_user(client, uid, name):
     response = client.api_call("delete-generic-object", {"uid": uid})
     response_logger(response, "The user {} has been deleted".format(name))
 
 
-# Creates a user and returns
-# it uid
 def create_user(client, name, password):
+    # Creates a user and returns
+    # its uid
     response = client.api_call(
         "add-generic-object",
         {
@@ -75,8 +65,8 @@ def create_user(client, name, password):
         return jsondata["uid"]
 
 
-# Creates a user group and returns its uid
 def create_group(client, name):
+    # Creates a user group and returns its uid
     response = client.api_call(
         "add-generic-object",
         {"name": name, "create": "com.checkpoint.objects.classes.dummy.CpmiUserGroup"},
@@ -114,74 +104,121 @@ def get_user(client, name, password):
         return retrieve_uid_from_array(jsondata)
 
 
-def get_group(client, name):
-    # Check if group already exists
-    # If group exists, return uid
-    # If not, create group and return uid
+def get_group_data(client, name):
+    # This functions checks if the group
+    # exists or not
     response = client.api_call("show-generic-objects", {"name": name},)
 
     isSuccess = response_logger(response, "Processing the group {}".format(name))
 
     if isSuccess:
-        jsondata = json.loads(json.dumps(response.data))
-
-        if len(jsondata["objects"]) == 0:
-            # Create group
-            return create_group(client, name)
-        else:
-            # Return existing group
-            return retrieve_uid_from_array(jsondata)
+        return json.loads(json.dumps(response.data))
+    else:
+        raise Exception("An error occured while getting the group {}".format(name))
 
 
-# Retrieve uid from array
+def get_group(client, name):
+    # Check if group already exists
+    # If group exists, return uid
+    # If not, create group and return uid
+    jsondata = get_group_data(client, name)
+
+    if len(jsondata["objects"]) == 0:
+        # Create group
+        return create_group(client, name)
+    else:
+        # Return existing group
+        return retrieve_uid_from_array(jsondata)
+
+
 def retrieve_uid_from_array(jsondata):
+    # Retrieve uid from array
     for i in range(len(jsondata["objects"])):
         obj = jsondata["objects"][i]
         return obj["uid"]
 
 
-# Assigns user to group
 def assign_user_to_group(client, uuid, guid):
+    # Assigns user to group
     response = client.api_call(
         "set-generic-object", {"uid": guid, "emptyFieldName": {"add": uuid}}
     )
     response_logger(response, "User has been added to group")
 
 
-# Check action
-def action_checker(client, user):
-    if user.action.upper() == ACTION_ADD.upper():
-        # Get the user uid
-        uuid = get_user(client, user.name, user.password)
+def remove_user_from_group(client, uuid, guid):
+    # Removes user from group
+    response = client.api_call(
+        "set-generic-object", {"uid": guid, "emptyFieldName": {"remove": uuid}}
+    )
+    response_logger(response, "User has been removed from group")
 
-        # iterate through all groups
-        for i in range(len(user.groups)):
-            # get group name individually
-            # removes all whitespaces as not allowed in checkpoint for User groups
-            group = (user.groups[i]).replace(" ", "")
 
-            # If group name is NOT empty
-            # we continue the assignment
-            if group != "":
-                # Get the group uid
-                guid = get_group(client, group)
+def action_add(client, user):
+    # Get the user uid
+    uuid = get_user(client, user.name, user.password)
 
-                # Assign the user to group
-                assign_user_to_group(client, uuid, guid)
-    elif user.action.upper() == ACTION_DELETE.upper():
-        # Returns the json data of the user
-        jsondata = get_user_data(client, user.name)
+    # iterate through all groups
+    for i in range(len(user.groups)):
+        # get group name individually
+        # removes all whitespaces as not allowed in checkpoint for User groups
+        group = (user.groups[i]).replace(" ", "")
+
+        # If group name is NOT empty
+        # we continue the assignment
+        if group != "":
+            # Get the group uid
+            guid = get_group(client, group)
+
+            # Assign the user to group
+            assign_user_to_group(client, uuid, guid)
+
+
+def action_delete(client, user):
+    # Returns the json data of the user
+    jsondata = get_user_data(client, user.name)
+
+    # If no objects returned
+    # user doesn't exist, thefore we don't enter if
+    if len(jsondata["objects"]) != 0:
+        uid = retrieve_uid_from_array(jsondata)
+        delete_user(client, uid, user.name)
+
+
+def action_edit(client, user):
+    # iterate through all groups
+    for i in range(len(user.groups)):
+        # get group name individually
+        # removes all whitespaces as not allowed in checkpoint for User groups
+        group = (user.groups[i]).replace(" ", "")
+
+        # Returns the json data of the group
+        jsondata = get_group_data(client, group)
 
         # If no objects returned
-        # user doesn't exist, thefore we don't enter if
+        # group doesn't exist, thefore we don't enter if
         if len(jsondata["objects"]) != 0:
-            uid = retrieve_uid_from_array(jsondata)
-            delete_user(client, uid, user.name)
-    elif user.action.upper() == ACTION_EDIT.upper():
-        display("Action is edit")
+            # Get the user uid
+            uuid = get_user(client, user.name, user.password)
+            guid = retrieve_uid_from_array(jsondata)
+
+            remove_user_from_group(client, uuid, guid)
+
+
+def action_checker(client, user):
+    # Checks which action is associated to the
+    # user and calls the correct functions accordingly
+    if user.action.upper() == Const.ACTION_ADD.upper():
+        action_add(client, user)
+    elif user.action.upper() == Const.ACTION_DELETE.upper():
+        action_delete(client, user)
+    elif user.action.upper() == Const.ACTION_EDIT.upper():
+        action_edit(client, user)
     else:
         raise Exception(
-            "Action entered is misleading. Please enter the correct actions and try again."
+            "The action '{}' for user '{}' is misleading. Please enter the correct actions and try again.".format(
+                user.action, user.name
+            )
         )
 
 
