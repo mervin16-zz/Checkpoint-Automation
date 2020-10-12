@@ -5,18 +5,24 @@ import pandas as pd
 from user import User
 from settings import Settings
 import constants as Const
+from utils import create_logger
+from datetime import datetime
+import os
 
 # FIXME("Remove when done with project")
 import traceback
 
+######################################
+########## Global Variables ##########
+######################################
+logger = None
 
 ######################################
 ############ My Functions ############
 ######################################
 def display(message):
     # Logs a message
-    # TODO("Use a logger instead of print")
-    print(message)
+    logger.info(message)
 
 
 def publish(client):
@@ -222,6 +228,32 @@ def action_checker(client, user):
         )
 
 
+def install_policy(client, settings):
+    # Install the policy on the SMS
+    display("Installing policy...")
+
+    response = client.api_call(
+        "install-policy",
+        {"policy-package": settings.sms_policy, "targets": settings.sms_gateways},
+    )
+
+    response_logger(response, "Policy has been installed")
+
+
+def logger_config():
+    global logger
+    # log folder path
+    LOG_FOLDER = os.path.join(os.path.dirname(__file__), "log/")
+
+    # create log folder
+    if os.path.exists(LOG_FOLDER) is False:
+        os.mkdir(LOG_FOLDER)
+
+    logger = create_logger(
+        (LOG_FOLDER + datetime.now().strftime("%Y-%m-%d--%H-%M-%S") + ".log")
+    )
+
+
 #####################################
 ########### Main Function ###########
 #####################################
@@ -234,6 +266,9 @@ def main():
 
         # Get settings from Settings class
         settings = Settings()
+
+        # Logger configurations
+        logger_config()
 
         # Read data from file
         dataframe = pd.read_excel(settings.user_data_path)
@@ -287,6 +322,9 @@ def main():
                     # If everything worked
                     # publish the session to the SMS
                     publish(client)
+
+                    # Install the policy
+                    install_policy(client, settings)
 
             except Exception as e:
                 # Prints the error message

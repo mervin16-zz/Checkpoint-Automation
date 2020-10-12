@@ -12,6 +12,8 @@ class Settings:
             self.sms_ip = settings["sms"]["host"]
             self.sms_username = settings["sms"]["username"]
             self.sms_password = settings["sms"]["password"]
+            self.sms_gateways = settings["sms"]["gateways"]
+            self.sms_policy = settings["sms"]["policy"]
 
             # API settings
             self.api_version = settings["api"]["version"]
