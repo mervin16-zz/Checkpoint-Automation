@@ -77,6 +77,9 @@ def create_user(client, name, password):
     )
 
     if response_logger(response, None):
+        # We display the password generated for the user
+        display(Const.MESSAGE_USER_PASSWORD_GENERATED.format(password))
+
         jsondata = json.loads(json.dumps(response.data))
         return jsondata["uid"]
 
@@ -330,7 +333,7 @@ def main():
                     publish(client)
 
                     # Install the policy
-                    # install_policy(client, settings)
+                    install_policy(client, settings)
 
             except Exception as e:
                 # Prints the error message

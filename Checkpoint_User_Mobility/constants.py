@@ -14,6 +14,7 @@ MESSAGE_USER_REMOVED = "The user {} has been deleted"
 MESSAGE_USER_ADDED_TO_GROUP = "User has been added to group"
 MESSAGE_GROUP_PROCESSING = "Processing the group {}"
 MESSAGE_USER_PROCESSING = "Processing the user {}"
+MESSAGE_USER_PASSWORD_GENERATED = "The password generated for the user is {}"
 
 # Error Messages
 ERROR_CONNECTION_SMS_FAILED = (
