@@ -2,15 +2,25 @@ from os import name
 from cpapi import APIClient, APIClientArgs
 import json
 import pandas as pd
+import enum
+from datetime import datetime
+import os
 from user import User
 from settings import Settings
 import constants as Const
 from utils import create_logger
-from datetime import datetime
-import os
 
 # FIXME("Remove when done with project")
 import traceback
+
+######################################
+############ Enumerators ############
+######################################
+class Action(enum.Enum):
+    ADD = 1
+    DELETE = 2
+    EDIT = 3
+
 
 ######################################
 ########## Global Variables ##########
@@ -28,13 +38,13 @@ def display(message):
 def publish(client):
     # Publish the session to the SMS
     response = client.api_call("publish", {})
-    response_logger(response, "Session published successfully.")
+    response_logger(response, Const.MESSAGE_SESSION_PUBLISHED)
 
 
 def discard(client):
     # Discard the session from the SMS
     response = client.api_call("discard", {})
-    response_logger(response, "Session has been discarded.")
+    response_logger(response, Const.MESSAGE_SESSION_DISCARDED)
 
 
 def response_logger(response, successMessage):
@@ -50,7 +60,7 @@ def response_logger(response, successMessage):
 
 def delete_user(client, uid, name):
     response = client.api_call("delete-generic-object", {"uid": uid})
-    response_logger(response, "The user {} has been deleted".format(name))
+    response_logger(response, Const.MESSAGE_USER_REMOVED.format(name))
 
 
 def create_user(client, name, password):
@@ -88,12 +98,12 @@ def get_user_data(client, name):
     # exists or not
     response = client.api_call("show-generic-objects", {"name": name},)
 
-    isSuccess = response_logger(response, "Processing user {}".format(name))
+    isSuccess = response_logger(response, Const.MESSAGE_USER_PROCESSING.format(name))
 
     if isSuccess:
         return json.loads(json.dumps(response.data))
     else:
-        raise Exception("An error occured while getting the user {}".format(name))
+        raise Exception(Const.ERROR_USER_FETCHING.format(name))
 
 
 def get_user(client, name, password):
@@ -115,12 +125,12 @@ def get_group_data(client, name):
     # exists or not
     response = client.api_call("show-generic-objects", {"name": name},)
 
-    isSuccess = response_logger(response, "Processing the group {}".format(name))
+    isSuccess = response_logger(response, Const.MESSAGE_GROUP_PROCESSING.format(name))
 
     if isSuccess:
         return json.loads(json.dumps(response.data))
     else:
-        raise Exception("An error occured while getting the group {}".format(name))
+        raise Exception(Const.ERROR_GROUP_FETCHING.format(name))
 
 
 def get_group(client, name):
@@ -149,7 +159,7 @@ def assign_user_to_group(client, uuid, guid):
     response = client.api_call(
         "set-generic-object", {"uid": guid, "emptyFieldName": {"add": uuid}}
     )
-    response_logger(response, "User has been added to group")
+    response_logger(response, Const.MESSAGE_USER_ADDED_TO_GROUP)
 
 
 def remove_user_from_group(client, uuid, guid):
@@ -157,7 +167,7 @@ def remove_user_from_group(client, uuid, guid):
     response = client.api_call(
         "set-generic-object", {"uid": guid, "emptyFieldName": {"remove": uuid}}
     )
-    response_logger(response, "User has been removed from group")
+    response_logger(response, Const.MESSAGE_USER_REMOVED_FROM_GROUP)
 
 
 def action_add(client, user):
@@ -214,30 +224,26 @@ def action_edit(client, user):
 def action_checker(client, user):
     # Checks which action is associated to the
     # user and calls the correct functions accordingly
-    if user.action.upper() == Const.ACTION_ADD.upper():
+    if user.action.upper() == Action.ADD.name:
         action_add(client, user)
-    elif user.action.upper() == Const.ACTION_DELETE.upper():
+    elif user.action.upper() == Action.DELETE.name:
         action_delete(client, user)
-    elif user.action.upper() == Const.ACTION_EDIT.upper():
+    elif user.action.upper() == Action.EDIT.name:
         action_edit(client, user)
     else:
-        raise Exception(
-            "The action '{}' for user '{}' is misleading. Please enter the correct actions and try again.".format(
-                user.action, user.name
-            )
-        )
+        raise Exception(Const.ERROR_ACTION_MISLEADING.format(user.action, user.name))
 
 
 def install_policy(client, settings):
     # Install the policy on the SMS
-    display("Installing policy...")
+    display(Const.MESSAGE_POLICY_INSTALLING)
 
     response = client.api_call(
         "install-policy",
         {"policy-package": settings.sms_policy, "targets": settings.sms_gateways},
     )
 
-    response_logger(response, "Policy has been installed")
+    response_logger(response, Const.MESSAGE_POLICY_INSTALLED)
 
 
 def logger_config():
@@ -291,11 +297,11 @@ def main():
 
                 # If login is not successful, log the error message.
                 if login_res.success is False:
-                    raise Exception(
-                        "Login failed. Please check SMS version (this script works only with R80.xx)"
-                    )
+                    raise Exception(Const.ERROR_CONNECTION_SMS_FAILED)
                 else:
-                    display("Successfully connected to: {}".format(settings.sms_ip))
+                    display(
+                        Const.MESSAGE_CONNECTION_SMS_SUCCESSFUL.format(settings.sms_ip)
+                    )
 
                     # Iterate through each row
                     # in the excel table
@@ -324,13 +330,13 @@ def main():
                     publish(client)
 
                     # Install the policy
-                    install_policy(client, settings)
+                    # install_policy(client, settings)
 
             except Exception as e:
                 # Prints the error message
                 # and starts discarding the session
-                display("An internal error occurred. Error: {}".format(e))
-                display("Discarding the session...")
+                display(Const.ERROR_INTERNAL.format(e))
+                display(Const.MESSAGE_SESSION_DISCARDING)
 
                 # Discard the active session
                 discard(client)
@@ -341,7 +347,7 @@ def main():
 
     except Exception as e:
         # Prints the error message
-        display("An internal error occurred. Error: {}".format(e))
+        display(Const.ERROR_INTERNAL.format(e))
 
         # FIXME("Remove when done with project")
         traceback.print_exc()
