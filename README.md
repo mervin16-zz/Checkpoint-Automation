@@ -37,7 +37,7 @@ Still not standardized. Will be documented soon...
 ## User Mobility
 We should always add user data in an excel with the following format:
 
-![user_data_excel](Checkpoint_User_Mobility\screenshots\format_excel_user_data.png)
+![user_data_excel](Checkpoint_User_Mobility/screenshots/format_excel_user_data.png)
 
 ## Object Creation
 
