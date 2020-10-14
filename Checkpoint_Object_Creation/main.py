@@ -2,18 +2,12 @@ from cpapi import APIClient, APIClientArgs
 import json
 from host import Host
 from network import Network
+from settings import Settings
 import constants as Const
 
 # TODO("Remove when done with project")
 from pprint import pprint
 import traceback
-
-# Data that should be moved to a file
-# SMS Credentials
-sms_ip = "172.30.43.150"
-sms_username = "api"
-sms_password = "ptc686grt09"
-api_version = 1.1
 
 
 ##########################################
@@ -180,15 +174,20 @@ def create_object(client, object_name, object_ip):
 # the checkpoint api client
 def main():
 
+    # Get settings from Settings class
+    settings = Settings()
+
     # Initialize the SMS session
-    client_args = APIClientArgs(server=sms_ip, api_version=api_version)
+    client_args = APIClientArgs(
+        server=settings.sms_ip, api_version=settings.api_version
+    )
 
     with APIClient(client_args) as client:
 
         # Catch any errors/exceptions and logs it
         try:
             # Login to SMS:
-            login_res = client.login(sms_username, sms_password)
+            login_res = client.login(settings.sms_username, settings.sms_password)
 
             # If login is not successful, raise an error message.
             if login_res.success is False:
@@ -198,7 +197,7 @@ def main():
             else:
                 # Displays a message that we
                 # successfully connected to the sms
-                display("Successfully connected to: {}".format(sms_ip))
+                display("Successfully connected to: {}".format(settings.sms_ip))
 
                 # FIXME("TEMPORARY INFO")
                 host_name = "Net_172.0.0.0_9"

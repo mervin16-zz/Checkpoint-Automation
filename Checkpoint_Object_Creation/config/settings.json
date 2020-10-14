@@ -9,7 +9,7 @@
     "api": {
         "version": 1.1
     },
-    "user_data": {
-        "path": "Checkpoint_User_Mobility/config/User-Mobility-Data.xlsx"
+    "object_data": {
+        "path": "Checkpoint_Object_Creation/config/Object_Creation-Data.xlsx"
     }
 }
