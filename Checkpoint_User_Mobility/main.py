@@ -10,9 +10,6 @@ from settings import Settings
 import constants as Const
 from utils import create_logger
 
-# FIXME("Remove when done with project")
-import traceback
-
 ######################################
 ############ Enumerators ############
 ######################################
@@ -273,11 +270,11 @@ def main():
     # checkpoint api client initialization
     try:
 
-        # Get settings from Settings class
-        settings = Settings()
-
         # Logger configurations
         logger_config()
+
+        # Get settings from Settings class
+        settings = Settings()
 
         # Read data from file
         dataframe = pd.read_excel(settings.user_data_path)
@@ -344,16 +341,12 @@ def main():
                 # Discard the active session
                 discard(client)
 
-                # FIXME("Remove when done with project")
-                traceback.print_exc()
                 exit(1)
 
     except Exception as e:
         # Prints the error message
         display(Const.ERROR_INTERNAL.format(e))
 
-        # FIXME("Remove when done with project")
-        traceback.print_exc()
         exit(1)
 
 
