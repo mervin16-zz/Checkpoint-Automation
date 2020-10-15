@@ -1,4 +1,5 @@
 from cpapi import APIClient, APIClientArgs
+import pandas as pd
 from host import Host
 from network import Network
 from settings import Settings
@@ -78,7 +79,7 @@ def check_host_existance(client, host_name, host_ip):
     # Make the API call to get all objects of type 'host'
     # matching the ip address
     response = client.api_call(
-        "show-objects", {"in": ["text", host_ip], "type": "host"}
+        "show-objects", {"filter": host_ip, "ip-only": True, "type": "host"}
     )
 
     # Checks if request is successfull
@@ -91,10 +92,28 @@ def check_host_existance(client, host_name, host_ip):
 
 def create_network(client, network_name, network_subnet, subnet_mask):
 
-    # Checks if the network is already present
-    network = check_network_existance(client, network_name, network_subnet)
+    # Fetch all networks matching with subnet
+    networks = fetch_networks(client, network_name, network_subnet)
 
-    if network is None:
+    # Check if returned networks
+    # matches subnet mask also
+    network = list(
+        filter(
+            lambda net: net.subnet == network_subnet and net.subnet_mask == subnet_mask,
+            networks,
+        )
+    )
+
+    # First we check if networks is not empty
+    if len(network) > 0:
+        # Then the network already exists
+        # Displays a message for the user
+        display("Network already present under name {}".format(network[0].name))
+        # Return the network
+        return network[0]
+
+    else:
+        # If network subnet and subnet mask doesn't match
         # Creates the network
         response = client.api_call(
             "add-network",
@@ -110,35 +129,20 @@ def create_network(client, network_name, network_subnet, subnet_mask):
         # We then return the new network object
         return Network.getInstance(response)
 
-    else:
-        # We check if the IP address matches
-        # If it matches, the network already exists
-        # We do not need to create another one, therefore returning the Network object
-        # Else, we raise an exception
-        if network.subnet == network_subnet:
-            # Displays a message for user
-            display("Network already present under name {}".format(network.name))
 
-            return network
-        else:
-            raise Exception(
-                "A network object exists with the same name but different subnet. Please check before running script."
-            )
-
-
-def check_network_existance(client, network_name, network_subnet):
+def fetch_networks(client, network_name, network_subnet):
 
     # Make the API call to get all objects of type 'network'
     # matching the ip address
     response = client.api_call(
-        "show-objects", {"in": ["text", network_subnet], "type": "network"}
+        "show-objects", {"filter": network_subnet, "ip-only": True, "type": "network"}
     )
 
     # Checks if request was a success
     response_logger(response, "Processing the object {}".format(network_name))
 
-    # Return network object
-    return Network.getInstanceVerification(response)
+    # Return network list
+    return Network.getInstances(response)
 
 
 def create_object(client, object_name, object_ip):
@@ -188,6 +192,12 @@ def main():
     # Get settings from Settings class
     settings = Settings()
 
+    # Read data from file
+    dataframe = pd.read_excel(settings.object_data_path)
+    # Since blank cells return 'nan' instead of empty string
+    # we replace all 'nan' with an empty string
+    dataframe = dataframe.fillna("")
+
     # Initialize the SMS session
     client_args = APIClientArgs(
         server=settings.sms_ip, api_version=settings.api_version
@@ -210,13 +220,19 @@ def main():
                 # successfully connected to the sms
                 display("Successfully connected to: {}".format(settings.sms_ip))
 
-                # FIXME("TEMPORARY INFO")
-                host_name = "Host_192.168.100.10"
-                host_ip = "192.168.100.10"
+                # Iterate through each row
+                # in the excel table
+                # Index is not used here but should
+                # NOT BE REMOVED
+                for index, row in dataframe.iterrows():
 
-                # Creates the object
-                # and returns an Object object
-                object_created = create_object(client, host_name, host_ip)
+                    object_name = row["Object Name"]
+                    object_ip = row["Object IP"]
+                    object_groups = row["Object Groups"]
+
+                    # Creates the object
+                    # and returns an Object object
+                    object_created = create_object(client, object_name, object_ip)
 
                 # Publish the session
                 publish(client)

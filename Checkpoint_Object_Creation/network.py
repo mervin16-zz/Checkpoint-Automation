@@ -2,9 +2,9 @@ from cobject import Object
 
 # DO NOT instantiate this class directly
 # Call the getInstance() or getInstanceVerification() method
-# The getInstance() methods retrieve the data directly from the dict
-# The getInstanceVerification() checks first if returned objects is not empty before retrieving data
-# getInstanceVerification() is called when retrieving a list of Networks
+# The getInstance() method retrieve the data directly from the dict
+# The getInstances() returns a list of matched subnets
+# getInstances() is called when retrieving a list of Networks
 # getInstance() is used after creation of Network
 class Network(Object):
 
@@ -17,18 +17,26 @@ class Network(Object):
         self.subnet_mask = subnet_mask
 
     @staticmethod
-    def getInstanceVerification(response):
-        # Checks if response returned atleast an object
-        # If atleast one object is present, it means
-        # the object already exists with given IP address
+    def getInstances(response):
+        # Checks if response has matches networks
         if response.data["total"] > 0:
-            # Retrieve data from dict
-            uid = response.data["objects"][0]["uid"]
-            name = response.data["objects"][0]["name"]
-            subnet = response.data["objects"][0]["subnet4"]
-            subnet_mask = response.data["objects"][0]["subnet-mask"]
-            return Network(uid, name, subnet, subnet_mask)
+            # If it mached some networks,
+            # Create empty list of networks
+            networks = []
+            # Iterate through fetched networks
+            for network in response.data["objects"]:
+                # Retrieve data
+                uid = network["uid"]
+                name = network["name"]
+                subnet = network["subnet4"]
+                subnet_mask = network["subnet-mask"]
+                # Add networks to list of networks
+                networks.append(Network(uid, name, subnet, subnet_mask))
+            # Return the list of networks
+            return networks
+
         else:
+            # No networks found
             return None
 
     @staticmethod

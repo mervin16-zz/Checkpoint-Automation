@@ -19,4 +19,4 @@ class Settings:
             self.api_version = settings["api"]["version"]
 
             # User data settings
-            self.user_data_path = settings["object_data"]["path"]
+            self.object_data_path = settings["object_data"]["path"]
