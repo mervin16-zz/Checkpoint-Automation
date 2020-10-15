@@ -1,8 +1,8 @@
 from cpapi import APIClient, APIClientArgs
-import json
 from host import Host
 from network import Network
 from settings import Settings
+from cobject import Object
 import constants as Const
 
 # TODO("Remove when done with project")
@@ -46,17 +46,31 @@ def response_logger(response, successMessage):
 def create_host(client, host_name, host_ip):
 
     # Checks if the host is already present
-    is_host_present = check_host_existance(client, host_name, host_ip)
+    host = check_host_existance(client, host_name, host_ip)
 
-    # If host is not present
-    # Create the host
-    if is_host_present:
-        display("Host already present")
-    else:
+    if host is None:
+        # Creates the host
         response = client.api_call(
             "add-host", {"name": host_name, "ip-address": host_ip}
         )
+
         response_logger(response, "{} has been created".format(host_name))
+
+        # We then return the host object here
+        return Host.getInstance(response)
+    else:
+        # We check if the IP address matches
+        # If it matches, the host already exists
+        # We therefore do not need to create another one, therefore returning true
+        # Else, we return false stating that the host doesn't already exist
+        if host.ip == host_ip:
+            # Displays a message for user
+            display("Host already present under name {}".format(host.name))
+            return host
+        else:
+            raise Exception(
+                "A host object exists with the same name but different IP. Please check before running script."
+            )
 
 
 def check_host_existance(client, host_name, host_ip):
@@ -68,40 +82,20 @@ def check_host_existance(client, host_name, host_ip):
     )
 
     # Checks if request is successfull
-    if response_logger(response, "Processing the object {}".format(host_name)):
+    response_logger(response, "Processing the object {}".format(host_name))
 
-        # Get the response and convert to Host object
-        host = Host.getInstance(response)
-
-        if host is None:
-            # WE return false stating that the
-            # host doesn't exist and that
-            # we need to create one
-            return False
-        else:
-            # We check if the IP address matches
-            # If it matches, the host already exists
-            # We therefore do not need to create another one, therefore returning true
-            # Else, we return false stating that the host doesn't already exist
-            if host.ip == host_ip:
-                return True
-            else:
-                return False
-    else:
-        raise Exception("An error occured while processing object")
+    # Get the response and convert to Host object
+    # Then return host object
+    return Host.getInstanceVerification(response)
 
 
 def create_network(client, network_name, network_subnet, subnet_mask):
 
     # Checks if the network is already present
-    is_network_present = check_network_existance(client, network_name, network_subnet)
+    network = check_network_existance(client, network_name, network_subnet)
 
-    # If network is not present
-    # Create the network
-    if is_network_present:
-        display("Network already present")
-    else:
-        print(subnet_mask)
+    if network is None:
+        # Creates the network
         response = client.api_call(
             "add-network",
             {
@@ -110,7 +104,26 @@ def create_network(client, network_name, network_subnet, subnet_mask):
                 "subnet-mask": subnet_mask,
             },
         )
+
         response_logger(response, "{} has been created".format(network_name))
+
+        # We then return the new network object
+        return Network.getInstance(response)
+
+    else:
+        # We check if the IP address matches
+        # If it matches, the network already exists
+        # We do not need to create another one, therefore returning the Network object
+        # Else, we raise an exception
+        if network.subnet == network_subnet:
+            # Displays a message for user
+            display("Network already present under name {}".format(network.name))
+
+            return network
+        else:
+            raise Exception(
+                "A network object exists with the same name but different subnet. Please check before running script."
+            )
 
 
 def check_network_existance(client, network_name, network_subnet):
@@ -121,31 +134,13 @@ def check_network_existance(client, network_name, network_subnet):
         "show-objects", {"in": ["text", network_subnet], "type": "network"}
     )
 
-    # Checks if request is successfull
-    if response_logger(response, "Processing the object {}".format(network_name)):
+    # Checks if request was a success
+    response_logger(response, "Processing the object {}".format(network_name))
 
-        # Get the response and convert to Network object
-        network = Network.getInstance(response)
-
-        if network is None:
-            # We return false stating that the
-            # network doesn't exist and that
-            # we need to create one
-            return False
-        else:
-            # We check if the IP address matches
-            # If it matches, the network already exists
-            # We therefore do not need to create another one, therefore returning true
-            # Else, we return false stating that the network doesn't already exist
-            if network.subnet == network_subnet:
-                return True
-            else:
-                return False
-    else:
-        raise Exception("An error occured while processing object")
+    # Return network object
+    return Network.getInstanceVerification(response)
 
 
-# Logic to create the object in Checkpoint
 def create_object(client, object_name, object_ip):
 
     # Checks if object is a
@@ -160,10 +155,26 @@ def create_object(client, object_name, object_ip):
         subnet_mask = subnet_info[1].strip()
 
         # Create the network
-        create_network(client, object_name, subnet, Const.subnet_mapper[subnet_mask])
+        # and return a Network object
+        network = create_network(
+            client, object_name, subnet, Const.subnet_mapper[subnet_mask]
+        )
+
+        # Cast Network object to parent class Object
+        network.__class__ = Object
+
+        # Returns the parent class Object
+        return network
     else:
         # Means that this is a host
-        create_host(client, object_name, object_ip)
+        # and return a Host object
+        host = create_host(client, object_name, object_ip)
+
+        # Cast Host object to parent class Object
+        host.__class__ = Object
+
+        # Returns the parent class Object
+        return host
 
 
 ###########################################
@@ -200,11 +211,12 @@ def main():
                 display("Successfully connected to: {}".format(settings.sms_ip))
 
                 # FIXME("TEMPORARY INFO")
-                host_name = "Net_172.0.0.0_9"
-                host_ip = "172.0.0.0/9"
+                host_name = "Host_192.168.100.10"
+                host_ip = "192.168.100.10"
 
                 # Creates the object
-                create_object(client, host_name, host_ip)
+                # and returns an Object object
+                object_created = create_object(client, host_name, host_ip)
 
                 # Publish the session
                 publish(client)
