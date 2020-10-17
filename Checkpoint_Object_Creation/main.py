@@ -4,6 +4,7 @@ from host import Host
 from network import Network
 from settings import Settings
 from cobject import Object
+from network_group import NGroup
 import constants as Const
 
 # TODO("Remove when done with project")
@@ -95,39 +96,41 @@ def create_network(client, network_name, network_subnet, subnet_mask):
     # Fetch all networks matching with subnet
     networks = fetch_networks(client, network_name, network_subnet)
 
-    # Check if returned networks
-    # matches subnet mask also
-    network = list(
-        filter(
-            lambda net: net.subnet == network_subnet and net.subnet_mask == subnet_mask,
-            networks,
+    # Check if returned networks is not none
+    if networks is not None:
+
+        # Filter the list that matches matches subnet and subnet mask and
+        # called next on the list
+        # If no networks found, it will return None
+        network = next(
+            filter(
+                lambda net: net.subnet == network_subnet
+                and net.subnet_mask == subnet_mask,
+                networks,
+            ),
+            None,
         )
+
+        # We check if filtered network is None
+        if network is not None:
+            # Then the network already exists
+            # Displays a message for the user
+            display("Network already present under name {}".format(network.name))
+            # Return the network
+            return network
+
+    # If code reaches this line, it means
+    # No networks were found in the filters
+    # We then create the network
+    response = client.api_call(
+        "add-network",
+        {"name": network_name, "subnet": network_subnet, "subnet-mask": subnet_mask,},
     )
 
-    # First we check if networks is not empty
-    if len(network) > 0:
-        # Then the network already exists
-        # Displays a message for the user
-        display("Network already present under name {}".format(network[0].name))
-        # Return the network
-        return network[0]
+    response_logger(response, "{} has been created".format(network_name))
 
-    else:
-        # If network subnet and subnet mask doesn't match
-        # Creates the network
-        response = client.api_call(
-            "add-network",
-            {
-                "name": network_name,
-                "subnet": network_subnet,
-                "subnet-mask": subnet_mask,
-            },
-        )
-
-        response_logger(response, "{} has been created".format(network_name))
-
-        # We then return the new network object
-        return Network.getInstance(response)
+    # We then return the new network object
+    return Network.getInstance(response)
 
 
 def fetch_networks(client, network_name, network_subnet):
@@ -181,6 +184,68 @@ def create_object(client, object_name, object_ip):
         return host
 
 
+def fetch_group(client, group, network_object):
+    # Make the API call to get a list of groups matching the name
+    response = client.api_call("show-objects", {"filter": group, "type": "group"})
+
+    response_logger(response, "Processing the group {}".format(group))
+
+    return NGroup.getInstanceVerification(response)
+
+
+def create_group_and_assign(client, group, network_object):
+    # Make the API call to create the group and assign the object
+    response = client.api_call(
+        "add-group", {"name": group, "members": network_object.name}
+    )
+
+    # If request is a success
+    # We just need to display a message
+    response_logger(
+        response,
+        "Creating the group {} and adding member {}".format(group, network_object.name),
+    )
+
+
+def assign_to_group(client, group, network_object):
+    # Make the API call to set object to the group
+    response = client.api_call(
+        "set-group", {"name": group.name, "members": {"add": network_object.name}}
+    )
+
+    # If request is a success
+    # We just need to display a message
+    response_logger(
+        response,
+        "Object {} has been assigned to group {}".format(
+            network_object.name, group.name
+        ),
+    )
+
+
+def object_assignment(client, network_object, groups):
+
+    for group in groups:
+        # get group name individually
+        # removes all whitespaces as not allowed in checkpoint for network groups
+        group = group.replace(" ", "")
+
+        # Fetch the group details
+        ngroup = fetch_group(client, group, network_object)
+
+        # Check if groups is none
+        # If it is none, it means no groups exists
+        # under this name, we therefore need to create one
+        # Else it means that the group already exists,
+        # then we just need to assign it to the group
+        if ngroup is None:
+            # Create the group
+            create_group_and_assign(client, group, network_object)
+        else:
+            # Assign the object to the group
+            assign_to_group(client, ngroup, network_object)
+
+
 ###########################################
 ############## Main Function ##############
 ###########################################
@@ -228,11 +293,14 @@ def main():
 
                     object_name = row["Object Name"]
                     object_ip = row["Object IP"]
-                    object_groups = row["Object Groups"]
+                    object_groups = str(row["Object Groups"]).split(";")
 
                     # Creates the object
                     # and returns an Object object
                     object_created = create_object(client, object_name, object_ip)
+
+                    # Assign object to group
+                    object_assignment(client, object_created, object_groups)
 
                 # Publish the session
                 publish(client)
