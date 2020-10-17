@@ -106,7 +106,6 @@ All information about the SMS, API version and path of the user data excel sheet
 
 Any changes to the sms credentials or path of the excel file should be changed in the settings file.
 
-```Not Documented Yet ```
 
 # License
 Copyright 2020 Mervin Hemaraju
