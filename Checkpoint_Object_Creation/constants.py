@@ -2,6 +2,7 @@
 ############ Constants ############
 ###################################
 
+# CIDR to subnet mask mapping
 subnet_mapper = {
     "1": "128.0.0.0",
     "2": "192.0.0.0",
@@ -37,3 +38,23 @@ subnet_mapper = {
     "32": "255.255.255.255",
 }
 
+
+# Messages
+MESSAGE_SESSION_DISCARDING = "Discarding the session..."
+MESSAGE_SESSION_DISCARDED = "Session has been discarded."
+MESSAGE_SESSION_PUBLISHED = "Session published successfully."
+MESSAGE_CONNECTION_SMS_SUCCESSFULL = "Successfully connected to: {}"
+MESSAGE_OBJECT_ASSIGNED_TO_GROUP = "Object {} has been assigned to group {}"
+MESSAGE_GROUP_CREATION_AND_ASSIGNMENT = "Creating the group {} and adding member {}"
+MESSAGE_GROUP_PROCESSING = "Processing the group {}"
+MESSAGE_OBJECT_PROCESSING = "Processing the object {}"
+MESSAGE_NETWORK_ALREADY_PRESENT = "Network already present under name {}"
+MESSAGE_HOST_ALREADY_PRESENT = "Host already present under name {}"
+MESSAGE_OBJECT_CREATED = "{} has been created"
+
+# Error Messages
+ERROR_INTERNAL = "An internal error occurred. Error: {}"
+ERROR_LOGIN_FALED = (
+    "Login failed. Please check SMS version (this script works only with R80.xx)"
+)
+ERROR_HOST_NAME_IP_MISMATCH = "A host object exists with the same name but different IP. Please check before running script."

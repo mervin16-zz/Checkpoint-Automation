@@ -1,16 +1,19 @@
 from cpapi import APIClient, APIClientArgs
 import pandas as pd
+import os
+from datetime import datetime
 from host import Host
 from network import Network
 from settings import Settings
 from cobject import Object
 from network_group import NGroup
 import constants as Const
+from utils import create_logger
 
-# TODO("Remove when done with project")
-from pprint import pprint
-import traceback
-
+######################################
+########## Global Variables ##########
+######################################
+logger = None
 
 ##########################################
 ############## My Functions ##############
@@ -19,19 +22,19 @@ import traceback
 # Publish the session to the SMS
 def publish(client):
     response = client.api_call("publish", {})
-    response_logger(response, "Session published successfully.")
+    response_logger(response, Const.MESSAGE_SESSION_PUBLISHED)
 
 
 # Discard the session from the SMS
 def discard(client):
     response = client.api_call("discard", {})
-    response_logger(response, "Session has been discarded.")
+    response_logger(response, Const.MESSAGE_SESSION_DISCARDED)
 
 
 # Displays a message
 def display(message):
-    # TODO("Use a logger instead of print")
-    print(message)
+    # Logs the message
+    logger.info(message)
 
 
 # Checks if the response is
@@ -56,7 +59,7 @@ def create_host(client, host_name, host_ip):
             "add-host", {"name": host_name, "ip-address": host_ip}
         )
 
-        response_logger(response, "{} has been created".format(host_name))
+        response_logger(response, Const.MESSAGE_OBJECT_CREATED.format(host_name))
 
         # We then return the host object here
         return Host.getInstance(response)
@@ -67,12 +70,10 @@ def create_host(client, host_name, host_ip):
         # Else, we return false stating that the host doesn't already exist
         if host.ip == host_ip:
             # Displays a message for user
-            display("Host already present under name {}".format(host.name))
+            display(Const.MESSAGE_HOST_ALREADY_PRESENT.format(host.name))
             return host
         else:
-            raise Exception(
-                "A host object exists with the same name but different IP. Please check before running script."
-            )
+            raise Exception(Const.ERROR_HOST_NAME_IP_MISMATCH)
 
 
 def check_host_existance(client, host_name, host_ip):
@@ -84,7 +85,7 @@ def check_host_existance(client, host_name, host_ip):
     )
 
     # Checks if request is successfull
-    response_logger(response, "Processing the object {}".format(host_name))
+    response_logger(response, Const.MESSAGE_OBJECT_PROCESSING.format(host_name))
 
     # Get the response and convert to Host object
     # Then return host object
@@ -115,7 +116,7 @@ def create_network(client, network_name, network_subnet, subnet_mask):
         if network is not None:
             # Then the network already exists
             # Displays a message for the user
-            display("Network already present under name {}".format(network.name))
+            display(Const.MESSAGE_NETWORK_ALREADY_PRESENT.format(network.name))
             # Return the network
             return network
 
@@ -127,7 +128,7 @@ def create_network(client, network_name, network_subnet, subnet_mask):
         {"name": network_name, "subnet": network_subnet, "subnet-mask": subnet_mask,},
     )
 
-    response_logger(response, "{} has been created".format(network_name))
+    response_logger(response, Const.MESSAGE_OBJECT_CREATED.format(network_name))
 
     # We then return the new network object
     return Network.getInstance(response)
@@ -142,7 +143,7 @@ def fetch_networks(client, network_name, network_subnet):
     )
 
     # Checks if request was a success
-    response_logger(response, "Processing the object {}".format(network_name))
+    response_logger(response, Const.MESSAGE_OBJECT_PROCESSING.format(network_name))
 
     # Return network list
     return Network.getInstances(response)
@@ -188,7 +189,7 @@ def fetch_group(client, group, network_object):
     # Make the API call to get a list of groups matching the name
     response = client.api_call("show-objects", {"filter": group, "type": "group"})
 
-    response_logger(response, "Processing the group {}".format(group))
+    response_logger(response, Const.MESSAGE_GROUP_PROCESSING.format(group))
 
     return NGroup.getInstanceVerification(response)
 
@@ -203,7 +204,7 @@ def create_group_and_assign(client, group, network_object):
     # We just need to display a message
     response_logger(
         response,
-        "Creating the group {} and adding member {}".format(group, network_object.name),
+        Const.MESSAGE_GROUP_CREATION_AND_ASSIGNMENT.format(group, network_object.name),
     )
 
 
@@ -217,9 +218,7 @@ def assign_to_group(client, group, network_object):
     # We just need to display a message
     response_logger(
         response,
-        "Object {} has been assigned to group {}".format(
-            network_object.name, group.name
-        ),
+        Const.MESSAGE_OBJECT_ASSIGNED_TO_GROUP.format(network_object.name, group.name),
     )
 
 
@@ -246,6 +245,20 @@ def object_assignment(client, network_object, groups):
             assign_to_group(client, ngroup, network_object)
 
 
+def logger_config():
+    global logger
+    # log folder path
+    LOG_FOLDER = os.path.join(os.path.dirname(__file__), "log/")
+
+    # create log folder
+    if os.path.exists(LOG_FOLDER) is False:
+        os.mkdir(LOG_FOLDER)
+
+    logger = create_logger(
+        (LOG_FOLDER + datetime.now().strftime("%Y-%m-%d--%H-%M-%S") + ".log")
+    )
+
+
 ###########################################
 ############## Main Function ##############
 ###########################################
@@ -254,70 +267,82 @@ def object_assignment(client, network_object, groups):
 # the checkpoint api client
 def main():
 
-    # Get settings from Settings class
-    settings = Settings()
+    # Try / Catch to get exceptions regarding
+    # excel file connections and
+    # checkpoint api client initialization
+    try:
 
-    # Read data from file
-    dataframe = pd.read_excel(settings.object_data_path)
-    # Since blank cells return 'nan' instead of empty string
-    # we replace all 'nan' with an empty string
-    dataframe = dataframe.fillna("")
+        # Logger configurations
+        logger_config()
 
-    # Initialize the SMS session
-    client_args = APIClientArgs(
-        server=settings.sms_ip, api_version=settings.api_version
-    )
+        # Get settings from Settings class
+        settings = Settings()
 
-    with APIClient(client_args) as client:
+        # Read data from file
+        dataframe = pd.read_excel(settings.object_data_path)
+        # Since blank cells return 'nan' instead of empty string
+        # we replace all 'nan' with an empty string
+        dataframe = dataframe.fillna("")
 
-        # Catch any errors/exceptions and logs it
-        try:
-            # Login to SMS:
-            login_res = client.login(settings.sms_username, settings.sms_password)
+        # Initialize the SMS session
+        client_args = APIClientArgs(
+            server=settings.sms_ip, api_version=settings.api_version
+        )
 
-            # If login is not successful, raise an error message.
-            if login_res.success is False:
-                raise Exception(
-                    "Login failed. Please check SMS version (this script works only with R80.xx)"
-                )
-            else:
-                # Displays a message that we
-                # successfully connected to the sms
-                display("Successfully connected to: {}".format(settings.sms_ip))
+        with APIClient(client_args) as client:
 
-                # Iterate through each row
-                # in the excel table
-                # Index is not used here but should
-                # NOT BE REMOVED
-                for index, row in dataframe.iterrows():
+            # Try / Catch to get exceptions regarding
+            # all checkpoint operations
+            try:
+                # Login to SMS:
+                login_res = client.login(settings.sms_username, settings.sms_password)
 
-                    object_name = row["Object Name"]
-                    object_ip = row["Object IP"]
-                    object_groups = str(row["Object Groups"]).split(";")
+                # If login is not successful, raise an error message.
+                if login_res.success is False:
+                    raise Exception(Const.ERROR_LOGIN_FALED)
+                else:
+                    # Displays a message that we
+                    # successfully connected to the sms
+                    display(
+                        Const.MESSAGE_CONNECTION_SMS_SUCCESSFULL.format(settings.sms_ip)
+                    )
 
-                    # Creates the object
-                    # and returns an Object object
-                    object_created = create_object(client, object_name, object_ip)
+                    # Iterate through each row
+                    # in the excel table
+                    # Index is not used here but should
+                    # NOT BE REMOVED
+                    for index, row in dataframe.iterrows():
 
-                    # Assign object to group
-                    object_assignment(client, object_created, object_groups)
+                        object_name = row["Object Name"]
+                        object_ip = row["Object IP"]
+                        object_groups = str(row["Object Groups"]).split(";")
 
-                # Publish the session
-                publish(client)
+                        # Creates the object
+                        # and returns an Object object
+                        object_created = create_object(client, object_name, object_ip)
 
-        except Exception as e:
-            # Prints the error message
-            # and starts discarding the session
-            display("An internal error occurred. Error: {}".format(e))
-            display("Discarding the session...")
+                        # Assign object to group
+                        object_assignment(client, object_created, object_groups)
 
-            # Discard the active session
-            discard(client)
+                    # Publish the session
+                    publish(client)
 
-            # TODO("Remove when done with project")
-            traceback.print_exc()
+            except Exception as e:
+                # Prints the error message
+                # and starts discarding the session
+                display(Const.ERROR_INTERNAL.format(e))
+                display(Const.MESSAGE_SESSION_DISCARDING)
 
-            exit(1)
+                # Discard the active session
+                discard(client)
+
+                exit(1)
+
+    except Exception as e:
+        # Prints the error message
+        display(Const.ERROR_INTERNAL.format(e))
+
+        exit(1)
 
 
 if __name__ == "__main__":

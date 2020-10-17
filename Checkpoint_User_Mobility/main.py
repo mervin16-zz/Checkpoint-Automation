@@ -1,4 +1,3 @@
-from os import name
 from cpapi import APIClient, APIClientArgs
 import json
 import pandas as pd
@@ -175,10 +174,10 @@ def action_add(client, user):
     uuid = get_user(client, user.name, user.password)
 
     # iterate through all groups
-    for i in range(len(user.groups)):
+    for group in user.groups:
         # get group name individually
         # removes all whitespaces as not allowed in checkpoint for User groups
-        group = (user.groups[i]).replace(" ", "")
+        group = group.replace(" ", "")
 
         # If group name is NOT empty
         # we continue the assignment
@@ -203,10 +202,10 @@ def action_delete(client, user):
 
 def action_edit(client, user):
     # iterate through all groups
-    for i in range(len(user.groups)):
+    for group in user.groups:
         # get group name individually
         # removes all whitespaces as not allowed in checkpoint for User groups
-        group = (user.groups[i]).replace(" ", "")
+        group = group.replace(" ", "")
 
         # Returns the json data of the group
         jsondata = get_group_data(client, group)
