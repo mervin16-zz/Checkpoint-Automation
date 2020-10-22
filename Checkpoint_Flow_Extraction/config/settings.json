@@ -1,0 +1,13 @@
+{
+    "sms": {
+        "host": "172.30.43.150",
+        "username": "api",
+        "password": "ptc686grt09"
+    },
+    "api": {
+        "version": 1.1
+    },
+    "object_data": {
+        "path": "Checkpoint_Flow_Extraction/config/Flow_Extraction-Data.xlsx"
+    }
+}
