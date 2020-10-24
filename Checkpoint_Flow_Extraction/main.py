@@ -1,7 +1,7 @@
 from cpapi import APIClient, APIClientArgs
 import pandas as pd
 from settings import Settings
-from flow import Rule, AccessRule, RuleIntermediator as RI
+from flow import AccessRule, RuleIntermediator as RI
 import constants as Const
 
 ######################################
@@ -56,11 +56,12 @@ def fetch_basic_rule(client, object_name):
         if not filtered_list:
             return None
 
-        return RI.fetch_rules(object_name, filtered_list)
+        return RI.fetch_rules(filtered_list)
 
 
-def fetch_access_rules(client, rules):
-    for rule in rules:
+def fetch_access_rules(client, policy_rules_dict):
+    for policy in policy_rules_dict:
+        print("For policy {}, uids {}".format(policy, policy_rules_dict[policy]))
         pass
     pass
 
@@ -116,11 +117,11 @@ def main():
                         # Make an API call to fetch
                         # basic rule details where the object
                         # is being used
-                        rules = fetch_basic_rule(client, object_name)
+                        policy_rules_dict = fetch_basic_rule(client, object_name)
 
                         # Make multiple API calls for each access rules in each
                         # policy returned
-                        access_rules = fetch_access_rules(client, rules)
+                        access_rules = fetch_access_rules(client, policy_rules_dict)
 
             except Exception as e:
                 # Prints the error message

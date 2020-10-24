@@ -10,8 +10,6 @@ class TestFlow(unittest.TestCase):
 
     def test_fetchRules_when_oneRuleExists(self):
         # Arrange
-        object_name = "Host_10.0.0.1"
-
         filtered_list = [
             {
                 "rule": {"uid": "4"},
@@ -20,26 +18,16 @@ class TestFlow(unittest.TestCase):
             }
         ]
 
-        expected_uids_policy_standard = ["4"]
-
-        expected_policy_standard = "Standard"
+        expected_result = {"Standard": ["4"]}
 
         # Act
-        result = RI.fetch_rules(object_name, filtered_list)
-
-        result_uids_standard = result[0].access_rules_uid
-
-        result_policy_standard = result[0].policy
+        result = RI.fetch_rules(filtered_list)
 
         # Assert
-        self.assertEqual(result_uids_standard, expected_uids_policy_standard)
-
-        self.assertEqual(result_policy_standard, expected_policy_standard)
+        self.assertEqual(expected_result, result)
 
     def test_fetchRules_when_oneRuleEachPolicyExists(self):
         # Arrange
-        object_name = "Host_10.0.0.1"
-
         filtered_list = [
             {
                 "rule": {"uid": "4"},
@@ -53,32 +41,16 @@ class TestFlow(unittest.TestCase):
             },
         ]
 
-        expected_uids_policy_standard = ["4"]
-        expected_uids_policy_premium = ["2"]
-
-        expected_policy_standard = "Standard"
-        expected_policy_premium = "Premium"
+        expected_result = {"Standard": ["4"], "Premium": ["2"]}
 
         # Act
-        result = RI.fetch_rules(object_name, filtered_list)
-
-        result_uids_standard = result[0].access_rules_uid
-        result_uids_premium = result[1].access_rules_uid
-
-        result_policy_standard = result[0].policy
-        result_policy_premium = result[1].policy
+        result = RI.fetch_rules(filtered_list)
 
         # Assert
-        self.assertEqual(result_uids_standard, expected_uids_policy_standard)
-        self.assertEqual(result_uids_premium, expected_uids_policy_premium)
-
-        self.assertEqual(result_policy_standard, expected_policy_standard)
-        self.assertEqual(result_policy_premium, expected_policy_premium)
+        self.assertEqual(result, expected_result)
 
     def test_fetchRules_when_multipleRulesExists(self):
         # Arrange
-        object_name = "Host_10.0.0.1"
-
         filtered_list = [
             {
                 "rule": {"uid": "4"},
@@ -107,27 +79,13 @@ class TestFlow(unittest.TestCase):
             },
         ]
 
-        expected_uids_policy_standard = ["4", "10"]
-        expected_uids_policy_premium = ["2", "5", "78"]
-
-        expected_policy_standard = "Standard"
-        expected_policy_premium = "Premium"
+        expected_result = {"Standard": ["4", "10"], "Premium": ["2", "5", "78"]}
 
         # Act
-        result = RI.fetch_rules(object_name, filtered_list)
-
-        result_uids_standard = result[0].access_rules_uid
-        result_uids_premium = result[1].access_rules_uid
-
-        result_policy_standard = result[0].policy
-        result_policy_premium = result[1].policy
+        result = RI.fetch_rules(filtered_list)
 
         # Assert
-        self.assertEqual(result_uids_standard, expected_uids_policy_standard)
-        self.assertEqual(result_uids_premium, expected_uids_policy_premium)
-
-        self.assertEqual(result_policy_standard, expected_policy_standard)
-        self.assertEqual(result_policy_premium, expected_policy_premium)
+        self.assertEqual(result, expected_result)
 
     #################### filter_layer_type() ####################
     def test_filterLayerType_when_noneExists(self):
