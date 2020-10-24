@@ -1,5 +1,7 @@
 from cpapi import APIClient, APIClientArgs
+import pandas as pd
 from settings import Settings
+from flow import Rule, AccessRule, RuleIntermediator as RI
 import constants as Const
 
 ######################################
@@ -12,21 +14,51 @@ def display(message):
     print(message)
 
 
-# Discard the session from the SMS
-def discard(client):
-    response = client.api_call("discard", {})
-    response_logger(response, Const.MESSAGE_SESSION_DISCARDED)
-
-
 # Checks if the response is
 # successful or not
-def response_logger(response, successMessage):
+def response_checker(response, successMessage, errorMessage):
+    # Checks if request was successfull
     if response.success:
+        # If successful, checks whether to display message or not
         if successMessage is not None:
             display(successMessage)
         return True
+    # If request was not successfull
+    elif not response.success:
+        # Checks if response code is 'object not found'
+        if response.data["code"] == "generic_err_object_not_found":
+            if errorMessage is not None:
+                display(errorMessage)
+            return False
+
+    raise Exception(response.error_message)
+
+
+def fetch_basic_rule(client, object_name):
+    # Creates the host
+    response = client.api_call("where-used", {"name": object_name})
+
+    response_checker(
+        response,
+        "Extracting flows for object {}".format(object_name),
+        "The object {} doesn't exist. Skipping ...".format(object_name),
+    )
+
+    if not response.data["used-directly"]["access-control-rules"]:
+        return None
     else:
-        raise Exception(response.error_message)
+        # Filter and order list
+        filtered_list = RI.order_by_package_name(
+            RI.filter_layer_type(response.data["used-directly"]["access-control-rules"])
+        )
+
+        # Check if list is not empty before proceeding
+        if not filtered_list:
+            return None
+
+        print(filtered_list)
+
+        return RI.fetch_rules(object_name, filtered_list)
 
 
 #####################################
@@ -40,6 +72,12 @@ def main():
 
         # Get settings from Settings class
         settings = Settings()
+
+        # Read data from file
+        dataframe = pd.read_excel(settings.object_data_path)
+        # Since blank cells return 'nan' instead of empty string
+        # we replace all 'nan' with an empty string
+        dataframe = dataframe.fillna("")
 
         # Initialize the SMS session
         client_args = APIClientArgs(
@@ -62,14 +100,31 @@ def main():
                     display(
                         Const.MESSAGE_CONNECTION_SMS_SUCCESSFULL.format(settings.sms_ip)
                     )
+
+                    # Iterate through each row
+                    # in the excel table
+                    # Index is not used here but should
+                    # NOT BE REMOVED
+                    for index, row in dataframe.iterrows():
+
+                        object_name = row["Object Name"]
+
+                        # Make an API call to fetch
+                        # basic rule details where the object
+                        # is being used
+                        rules = fetch_basic_rule(client, object_name)
+
+                        for rule in rules:
+                            print(
+                                "For policy {}, uids {}".format(
+                                    rule.policy, rule.access_rules_uid
+                                )
+                            )
+
             except Exception as e:
                 # Prints the error message
                 # and starts discarding the session
                 display(Const.ERROR_INTERNAL.format(e))
-                display(Const.MESSAGE_SESSION_DISCARDING)
-
-                # Discard the active session
-                discard(client)
 
                 exit(1)
 
