@@ -8,7 +8,7 @@ class TestFlow(unittest.TestCase):
     #################### Rule Intermediator ####################
     ############################################################
 
-    def test_ruleIntermediatorConstructor_when_oneRuleExists(self):
+    def test_fetchRules_when_oneRuleExists(self):
         # Arrange
         object_name = "Host_10.0.0.1"
 
@@ -36,7 +36,7 @@ class TestFlow(unittest.TestCase):
 
         self.assertEqual(result_policy_standard, expected_policy_standard)
 
-    def test_ruleIntermediatorConstructor_when_oneRuleEachPolicyExists(self):
+    def test_fetchRules_when_oneRuleEachPolicyExists(self):
         # Arrange
         object_name = "Host_10.0.0.1"
 
@@ -75,7 +75,7 @@ class TestFlow(unittest.TestCase):
         self.assertEqual(result_policy_standard, expected_policy_standard)
         self.assertEqual(result_policy_premium, expected_policy_premium)
 
-    def test_ruleIntermediatorConstructor_when_multipleRulesExists(self):
+    def test_fetchRules_when_multipleRulesExists(self):
         # Arrange
         object_name = "Host_10.0.0.1"
 
@@ -193,11 +193,17 @@ class TestFlow(unittest.TestCase):
             {"rule": {"uid": "2"}, "package": {"name": "Premium"}},
             {"rule": {"uid": "3"}, "package": {"name": "Standard"}},
             {"rule": {"uid": "4"}, "package": {"name": "Premium"}},
+            {"rule": {"uid": "5"}, "package": {"name": "Premium"}},
+            {"rule": {"uid": "6"}, "package": {"name": "Isonet"}},
+            {"rule": {"uid": "7"}, "package": {"name": "Premium"}},
         ]
 
         expected_result = [
+            {"rule": {"uid": "6"}, "package": {"name": "Isonet"}},
             {"rule": {"uid": "2"}, "package": {"name": "Premium"}},
             {"rule": {"uid": "4"}, "package": {"name": "Premium"}},
+            {"rule": {"uid": "5"}, "package": {"name": "Premium"}},
+            {"rule": {"uid": "7"}, "package": {"name": "Premium"}},
             {"rule": {"uid": "1"}, "package": {"name": "Standard"}},
             {"rule": {"uid": "3"}, "package": {"name": "Standard"}},
         ]

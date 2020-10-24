@@ -35,7 +35,6 @@ def response_checker(response, successMessage, errorMessage):
 
 
 def fetch_basic_rule(client, object_name):
-    # Creates the host
     response = client.api_call("where-used", {"name": object_name})
 
     response_checker(
@@ -45,6 +44,7 @@ def fetch_basic_rule(client, object_name):
     )
 
     if not response.data["used-directly"]["access-control-rules"]:
+        display("{} is not used anywhere".format(object_name))
         return None
     else:
         # Filter and order list
@@ -56,9 +56,13 @@ def fetch_basic_rule(client, object_name):
         if not filtered_list:
             return None
 
-        print(filtered_list)
-
         return RI.fetch_rules(object_name, filtered_list)
+
+
+def fetch_access_rules(client, rules):
+    for rule in rules:
+        pass
+    pass
 
 
 #####################################
@@ -114,12 +118,9 @@ def main():
                         # is being used
                         rules = fetch_basic_rule(client, object_name)
 
-                        for rule in rules:
-                            print(
-                                "For policy {}, uids {}".format(
-                                    rule.policy, rule.access_rules_uid
-                                )
-                            )
+                        # Make multiple API calls for each access rules in each
+                        # policy returned
+                        access_rules = fetch_access_rules(client, rules)
 
             except Exception as e:
                 # Prints the error message
