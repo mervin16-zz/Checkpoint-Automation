@@ -1,8 +1,17 @@
 from cpapi import APIClient, APIClientArgs
 import pandas as pd
+from datetime import datetime
+import os
 from settings import Settings
 from flow import AccessRule, RuleIntermediator as RI
 import constants as Const
+from utils import create_logger
+
+######################################
+########## Global Variables ##########
+######################################
+logger = None
+
 
 ######################################
 ############ My Functions ############
@@ -10,8 +19,7 @@ import constants as Const
 
 # Displays a message
 def display(message):
-    # TODO("Use a logger instead")
-    print(message)
+    logger.info(message)
 
 
 # Checks if the response is
@@ -39,13 +47,13 @@ def fetch_basic_rule(client, object_name):
 
     is_success = response_checker(
         response,
-        "Extracting flows for object {}".format(object_name),
-        "The object {} doesn't exist. Skipping ...".format(object_name),
+        Const.MESSAGE_EXTRACTING_FLOWS_FOR_OBJECT.format(object_name),
+        Const.MESSAGE_OBJECT_DOESNT_EXIST.format(object_name),
     )
 
     if is_success:
         if not response.data["used-directly"]["access-control-rules"]:
-            display("{} is not used anywhere".format(object_name))
+            display(Const.MESSAGE_OBJECT_NOT_USED.format(object_name))
             return None
         else:
             # Filter and order list
@@ -57,7 +65,7 @@ def fetch_basic_rule(client, object_name):
 
             # Check if list is not empty before proceeding
             if not filtered_list:
-                display("{} is not used anywhere".format(object_name))
+                display(Const.MESSAGE_OBJECT_NOT_USED.format(object_name))
                 return None
 
             return RI.fetch_rules(filtered_list)
@@ -81,11 +89,7 @@ def fetch_access_rules(client, policy_rules_dict, queried_object):
             )
 
             is_success = response_checker(
-                response,
-                None,
-                "An error occured while fetching flow with uid {} in policy {}".format(
-                    uid, policy
-                ),
+                response, None, Const.ERROR_FLOW_FETCHING.format(uid, policy),
             )
 
             if is_success:
@@ -134,11 +138,25 @@ def export_rules(access_rules):
     )
 
     # Write to excel file
-    dataframe.to_excel("Checkpoint_Flow_Extraction/out/extracted_flows.xlsx")
+    dataframe.to_excel(Const.PATH_FLOWS_EXTRACTION_OUTPUT)
 
     # Generate message for user
     display(
-        "The flows has been extracted to the path 'Checkpoint_Flow_Extraction/out/extracted_flows.xlsx'"
+        Const.MESSAGE_EXTRACTION_COMPLETE.format(Const.PATH_FLOWS_EXTRACTION_OUTPUT)
+    )
+
+
+def logger_config():
+    global logger
+    # log folder path
+    LOG_FOLDER = os.path.join(os.path.dirname(__file__), "log/")
+
+    # create log folder
+    if os.path.exists(LOG_FOLDER) is False:
+        os.mkdir(LOG_FOLDER)
+
+    logger = create_logger(
+        (LOG_FOLDER + datetime.now().strftime("%Y-%m-%d--%H-%M-%S") + ".log")
     )
 
 
@@ -150,6 +168,9 @@ def main():
     # excel file connections and
     # checkpoint api client initialization
     try:
+        # Logger configurations
+        logger_config()
+
         # Get settings from Settings class
         settings = Settings()
 

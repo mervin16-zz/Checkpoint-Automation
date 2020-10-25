@@ -13,7 +13,7 @@ This is a project for automating tasks in the Checkpoint Firewall Security versi
 ```pip install --upgrade git+https://github.com/CheckPointSW/cp_mgmt_api_python_sdk```
 
 ### Running the script
-Execute the ```main.py``` file in the corresponding project folder for the tak ythat you wnt to prun.
+Execute the ```main.py``` file in the corresponding project folder for the task that you want to run.
 
 # Tasks
 
@@ -21,6 +21,7 @@ Currently the project has the following tasks automated:
 
 - User creation and assigning to groups
 - Object creations and assigning to groups
+- Flow Extraction
 
 
 # Constraints
@@ -44,6 +45,12 @@ Currently the project has the following tasks automated:
 -  If you want to add the user to multiple groups, you will need to separate the group name with a ```;```.
 -  If a group is not already present on the firewall, the script witll create it.
 
+## Flow Extraction
+-  You should provide the exact object name that you want to query
+-  Flows are extracted in the Network Layer with type access-layer ONLY
+-  Flows are exported to Excel file ONLY
+
+
 # File Formats
 
 ## User Mobility
@@ -57,6 +64,13 @@ We should always add user data in an excel with the following format:
 We should always add objects in an excel with the following format:
 
 ![user_data_excel](screenshots/object_creation_file_format.png)
+
+
+## Flow Extraction
+
+We should always add user data in an excel with the following format:
+
+![user_data_excel](screenshots/flow_extraction_file_format.png)
 
 
 # Settings
@@ -88,6 +102,8 @@ All information about the SMS, API version and path of the user data excel sheet
 Any changes to the sms credentials or path of the excel file should be changed in the settings file.
 
 
+## Object Creation
+
 All information about the SMS, API version and path of the user data excel sheet is configured in a ```config/settings.json file``` as such:
 
 ```
@@ -95,13 +111,36 @@ All information about the SMS, API version and path of the user data excel sheet
     "sms": {
         "host": "X.X.X.X",
         "username": "USERNAME",
-        "password": "PAS
+        "password": "PASS"
     },
     "api": {
         "version": 1.1
     },
     "object_data": {
         "path": "Checkpoint_Object_Creation/config/Object_Creation-Data.xlsx"
+    }
+}
+```
+
+Any changes to the sms credentials or path of the excel file should be changed in the settings file.
+
+
+## Flow Extraction
+
+All information about the SMS, API version and path of the user data excel sheet is configured in a ```config/settings.json file``` as such:
+
+```
+{
+    "sms": {
+        "host": "X.X.X.X",
+        "username": "USERNAME",
+        "password": "PASS"
+    },
+    "api": {
+        "version": 1.1
+    },
+    "object_data": {
+        "path": "Checkpoint_Flow_Extraction/config/Flow_Extraction-Data.xlsx"
     }
 }
 ```
