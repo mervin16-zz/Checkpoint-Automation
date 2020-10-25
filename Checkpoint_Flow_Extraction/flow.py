@@ -4,13 +4,14 @@ class RuleIntermediator:
         groups = {}
         # Extract uids for each policy
         # and classify them in a dict
-        for rule, name in [
-            (a["rule"]["uid"], a["package"]["name"]) for a in filtered_list
+        for rule, name, layer in [
+            (a["rule"]["uid"], a["package"]["name"], a["layer"]["name"])
+            for a in filtered_list
         ]:
             if name in groups:
-                groups[name].append(rule)
+                groups[name]["uids"].append(rule)
             else:
-                groups[name] = [rule]
+                groups[name] = {"uids": [rule], "layer": layer}
 
         return groups
 
@@ -26,12 +27,28 @@ class RuleIntermediator:
 class AccessRule:
 
     # Constructor
-    def __init__(self, uid, name, source, destination, services, action, comment):
+    def __init__(
+        self, uid, name, policy, source, destination, service, action, comment
+    ):
         self.uid = uid  # The rule UID
         self.name = name  # The rule name
+        self.policy = policy  # The oolicy name
         self.source = source  # The source ip address(es)
         self.destination = destination  # The destination ip address(es)
-        self.services = services  # The port(s) in the rule
+        self.service = service  # The port(s) in the rule
         self.action = action  # The action of the rule
         self.comment = comment  # The comment of the rule
+
+    @staticmethod
+    def getInstance(response, policy):
+        return AccessRule(
+            uid=response["uid"],
+            name=response["name"],
+            policy=policy,
+            source=response["source"],
+            destination=response["destination"],
+            service=response["service"],
+            action=response["action"]["name"],
+            comment=response["comments"],
+        )
 

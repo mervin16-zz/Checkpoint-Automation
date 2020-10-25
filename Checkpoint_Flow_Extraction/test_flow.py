@@ -18,7 +18,7 @@ class TestFlow(unittest.TestCase):
             }
         ]
 
-        expected_result = {"Standard": ["4"]}
+        expected_result = {"Standard": {"uids": ["4"], "layer": "Premium Network"}}
 
         # Act
         result = RI.fetch_rules(filtered_list)
@@ -41,7 +41,10 @@ class TestFlow(unittest.TestCase):
             },
         ]
 
-        expected_result = {"Standard": ["4"], "Premium": ["2"]}
+        expected_result = {
+            "Standard": {"uids": ["4"], "layer": "Premium Network"},
+            "Premium": {"uids": ["2"], "layer": "Premium Network"},
+        }
 
         # Act
         result = RI.fetch_rules(filtered_list)
@@ -79,7 +82,10 @@ class TestFlow(unittest.TestCase):
             },
         ]
 
-        expected_result = {"Standard": ["4", "10"], "Premium": ["2", "5", "78"]}
+        expected_result = {
+            "Standard": {"uids": ["4", "10"], "layer": "Premium Network"},
+            "Premium": {"uids": ["2", "5", "78"], "layer": "Premium Network"},
+        }
 
         # Act
         result = RI.fetch_rules(filtered_list)

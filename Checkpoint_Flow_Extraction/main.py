@@ -37,33 +37,70 @@ def response_checker(response, successMessage, errorMessage):
 def fetch_basic_rule(client, object_name):
     response = client.api_call("where-used", {"name": object_name})
 
-    response_checker(
+    is_success = response_checker(
         response,
         "Extracting flows for object {}".format(object_name),
         "The object {} doesn't exist. Skipping ...".format(object_name),
     )
 
-    if not response.data["used-directly"]["access-control-rules"]:
-        display("{} is not used anywhere".format(object_name))
-        return None
-    else:
-        # Filter and order list
-        filtered_list = RI.order_by_package_name(
-            RI.filter_layer_type(response.data["used-directly"]["access-control-rules"])
-        )
-
-        # Check if list is not empty before proceeding
-        if not filtered_list:
+    if is_success:
+        if not response.data["used-directly"]["access-control-rules"]:
+            display("{} is not used anywhere".format(object_name))
             return None
+        else:
+            # Filter and order list
+            filtered_list = RI.order_by_package_name(
+                RI.filter_layer_type(
+                    response.data["used-directly"]["access-control-rules"]
+                )
+            )
 
-        return RI.fetch_rules(filtered_list)
+            # Check if list is not empty before proceeding
+            if not filtered_list:
+                display("{} is not used anywhere".format(object_name))
+                return None
+
+            return RI.fetch_rules(filtered_list)
+    else:
+        return None
 
 
 def fetch_access_rules(client, policy_rules_dict):
+
+    access_rules = []
+
+    # For each policy in the dict
     for policy in policy_rules_dict:
-        print("For policy {}, uids {}".format(policy, policy_rules_dict[policy]))
-        pass
-    pass
+
+        # For each uids in the policy
+        for uid in policy_rules_dict[policy]["uids"]:
+
+            response = client.api_call(
+                "show-access-rule",
+                {"uid": uid, "layer": policy_rules_dict[policy]["layer"]},
+            )
+
+            is_success = response_checker(
+                response,
+                None,
+                "An error occured while fetching flow with uid {} in policy {}".format(
+                    uid, policy
+                ),
+            )
+
+            if is_success:
+                access_rules.append(AccessRule.getInstance(response.data, policy))
+            else:
+                return None
+
+    return access_rules
+
+
+def export_rules(access_rules):
+    for ar in access_rules:
+        print(
+            f"The name is {ar.name}, the action is {ar.action} and the sources are {ar.source}"
+        )
 
 
 #####################################
@@ -90,45 +127,41 @@ def main():
         )
 
         with APIClient(client_args) as client:
-            # Try / Catch to get exceptions regarding
-            # all checkpoint operations
-            try:
-                # Login to SMS:
-                login_res = client.login(settings.sms_username, settings.sms_password)
 
-                # If login is not successful, raise an error message.
-                if login_res.success is False:
-                    raise Exception(Const.ERROR_LOGIN_FALED)
-                else:
-                    # Displays a message that we
-                    # successfully connected to the sms
-                    display(
-                        Const.MESSAGE_CONNECTION_SMS_SUCCESSFULL.format(settings.sms_ip)
-                    )
+            # Login to SMS:
+            login_res = client.login(settings.sms_username, settings.sms_password)
 
-                    # Iterate through each row
-                    # in the excel table
-                    # Index is not used here but should
-                    # NOT BE REMOVED
-                    for index, row in dataframe.iterrows():
+            # If login is not successful, raise an error message.
+            if login_res.success is False:
+                raise Exception(Const.ERROR_LOGIN_FALED)
+            else:
+                # Displays a message that we
+                # successfully connected to the sms
+                display(
+                    Const.MESSAGE_CONNECTION_SMS_SUCCESSFULL.format(settings.sms_ip)
+                )
 
-                        object_name = row["Object Name"]
+                # Iterate through each row
+                # in the excel table
+                # Index is not used here but should
+                # NOT BE REMOVED
+                for index, row in dataframe.iterrows():
 
-                        # Make an API call to fetch
-                        # basic rule details where the object
-                        # is being used
-                        policy_rules_dict = fetch_basic_rule(client, object_name)
+                    object_name = row["Object Name"]
 
+                    # Make an API call to fetch
+                    # basic rule details where the object
+                    # is being used
+                    policy_rules_dict = fetch_basic_rule(client, object_name)
+
+                    if policy_rules_dict != None:
                         # Make multiple API calls for each access rules in each
                         # policy returned
                         access_rules = fetch_access_rules(client, policy_rules_dict)
 
-            except Exception as e:
-                # Prints the error message
-                # and starts discarding the session
-                display(Const.ERROR_INTERNAL.format(e))
-
-                exit(1)
+                        if access_rules != None:
+                            # Export access rules
+                            export_rules(access_rules)
 
     except Exception as e:
         # Prints the error message
