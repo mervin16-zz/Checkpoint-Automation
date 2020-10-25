@@ -49,6 +49,7 @@ Currently the project has the following tasks automated:
 -  You should provide the exact object name that you want to query
 -  Flows are extracted in the Network Layer with type access-layer ONLY
 -  Flows are exported to Excel file ONLY
+-  You need to have a folder named "out" in the root folder
 
 
 # File Formats
