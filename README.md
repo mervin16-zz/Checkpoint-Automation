@@ -8,6 +8,8 @@ This is a project for automating tasks in the Checkpoint Firewall Security versi
 ### Libraries
 ```pip install pandas```
 
+```pip install openpyxl```
+
 ```pip install --upgrade git+https://github.com/CheckPointSW/cp_mgmt_api_python_sdk```
 
 ### Running the script

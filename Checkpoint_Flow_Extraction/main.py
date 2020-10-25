@@ -65,7 +65,7 @@ def fetch_basic_rule(client, object_name):
         return None
 
 
-def fetch_access_rules(client, policy_rules_dict):
+def fetch_access_rules(client, policy_rules_dict, queried_object):
 
     access_rules = []
 
@@ -89,7 +89,9 @@ def fetch_access_rules(client, policy_rules_dict):
             )
 
             if is_success:
-                access_rules.append(AccessRule.getInstance(response.data, policy))
+                access_rules.append(
+                    AccessRule.getInstance(response.data, policy, queried_object)
+                )
             else:
                 return None
 
@@ -97,10 +99,47 @@ def fetch_access_rules(client, policy_rules_dict):
 
 
 def export_rules(access_rules):
+
+    rows = []
+
+    # Export all into rows
     for ar in access_rules:
-        print(
-            f"The name is {ar.name}, the action is {ar.action} and the sources are {ar.source}"
-        )
+
+        row = [
+            ar.queried_object,
+            ar.name,
+            ar.policy,
+            ar.source,
+            ar.destination,
+            ar.service,
+            ar.action,
+            ar.comment,
+        ]
+
+        rows.append(row)
+
+    # Creates a data frame for exporting to excel
+    dataframe = pd.DataFrame(
+        rows,
+        columns=[
+            "Queried Object",
+            "Rule Name",
+            "Policy",
+            "Source(s)",
+            "Destination(s)",
+            "Service(s)",
+            "Action",
+            "Comments",
+        ],
+    )
+
+    # Write to excel file
+    dataframe.to_excel("Checkpoint_Flow_Extraction/out/extracted_flows.xlsx")
+
+    # Generate message for user
+    display(
+        "The flows has been extracted to the path 'Checkpoint_Flow_Extraction/out/extracted_flows.xlsx'"
+    )
 
 
 #####################################
@@ -111,7 +150,6 @@ def main():
     # excel file connections and
     # checkpoint api client initialization
     try:
-
         # Get settings from Settings class
         settings = Settings()
 
@@ -141,6 +179,8 @@ def main():
                     Const.MESSAGE_CONNECTION_SMS_SUCCESSFULL.format(settings.sms_ip)
                 )
 
+                access_rules = []
+
                 # Iterate through each row
                 # in the excel table
                 # Index is not used here but should
@@ -157,11 +197,17 @@ def main():
                     if policy_rules_dict != None:
                         # Make multiple API calls for each access rules in each
                         # policy returned
-                        access_rules = fetch_access_rules(client, policy_rules_dict)
+                        a_rules = fetch_access_rules(
+                            client, policy_rules_dict, object_name
+                        )
 
-                        if access_rules != None:
-                            # Export access rules
-                            export_rules(access_rules)
+                        if a_rules != None:
+                            # Extend the list
+                            access_rules.extend(a_rules)
+
+                if access_rules != None:
+                    # Export access rules
+                    export_rules(access_rules)
 
     except Exception as e:
         # Prints the error message

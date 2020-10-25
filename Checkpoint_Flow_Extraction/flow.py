@@ -28,8 +28,18 @@ class AccessRule:
 
     # Constructor
     def __init__(
-        self, uid, name, policy, source, destination, service, action, comment
+        self,
+        queried_object,
+        uid,
+        name,
+        policy,
+        source,
+        destination,
+        service,
+        action,
+        comment,
     ):
+        self.queried_object = queried_object
         self.uid = uid  # The rule UID
         self.name = name  # The rule name
         self.policy = policy  # The oolicy name
@@ -40,14 +50,31 @@ class AccessRule:
         self.comment = comment  # The comment of the rule
 
     @staticmethod
-    def getInstance(response, policy):
+    def getInstance(response, policy, queried_object):
+        source = []
+        destination = []
+        service = []
+
+        # Query all sources
+        for src in response["source"]:
+            source.append(src["name"])
+
+        # Query all destinations
+        for dst in response["destination"]:
+            destination.append(dst["name"])
+
+        # Query all services
+        for serv in response["service"]:
+            service.append(serv["name"])
+
         return AccessRule(
+            queried_object=queried_object,
             uid=response["uid"],
             name=response["name"],
             policy=policy,
-            source=response["source"],
-            destination=response["destination"],
-            service=response["service"],
+            source=source,
+            destination=destination,
+            service=service,
             action=response["action"]["name"],
             comment=response["comments"],
         )
