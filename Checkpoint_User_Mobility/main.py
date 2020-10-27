@@ -1,5 +1,4 @@
 from cpapi import APIClient, APIClientArgs
-import json
 import pandas as pd
 import enum
 from datetime import datetime
@@ -76,8 +75,7 @@ def create_user(client, name, password):
         # We display the password generated for the user
         display(Const.MESSAGE_USER_PASSWORD_GENERATED.format(password))
 
-        jsondata = json.loads(json.dumps(response.data))
-        return jsondata["uid"]
+        return response.data["uid"]
 
 
 def create_group(client, name):
@@ -88,19 +86,19 @@ def create_group(client, name):
     )
 
     if response_logger(response, None):
-        jsondata = json.loads(json.dumps(response.data))
-        return jsondata["uid"]
+        return response.data["uid"]
 
 
 def get_user_data(client, name):
     # This functions checks if the user
     # exists or not
-    response = client.api_call("show-generic-objects", {"name": name},)
+    response = client.api_call("show-objects", {"filter": name},)
 
     isSuccess = response_logger(response, Const.MESSAGE_USER_PROCESSING.format(name))
 
     if isSuccess:
-        return json.loads(json.dumps(response.data))
+        # Returns a list of objects
+        return response.data["objects"]
     else:
         raise Exception(Const.ERROR_USER_FETCHING.format(name))
 
@@ -109,25 +107,31 @@ def get_user(client, name, password):
     # Check if user already exists
     # If user exists, return uid
     # If not, create user and return uid
-    jsondata = get_user_data(client, name)
+    objects = get_user_data(client, name)
 
-    if len(jsondata["objects"]) == 0:
+    # Filter the objects by CpmiUsers and the exact user name
+    # return the next one
+    filter_by_type = filter(lambda d: d["type"] == "CpmiUser", objects)
+    filter_by_name = next(filter(lambda d: d["name"] == name, filter_by_type), None)
+
+    if filter_by_name is None:
         # Create user
         return create_user(client, name, password)
     else:
         # Return uid of existing user
-        return retrieve_uid_from_array(jsondata)
+        return filter_by_name["uid"]
 
 
 def get_group_data(client, name):
     # This functions checks if the group
     # exists or not
-    response = client.api_call("show-generic-objects", {"name": name},)
+    response = client.api_call("show-objects", {"filter": name},)
 
     isSuccess = response_logger(response, Const.MESSAGE_GROUP_PROCESSING.format(name))
 
     if isSuccess:
-        return json.loads(json.dumps(response.data))
+        # Returns a list of objects
+        return response.data["objects"]
     else:
         raise Exception(Const.ERROR_GROUP_FETCHING.format(name))
 
@@ -136,21 +140,19 @@ def get_group(client, name):
     # Check if group already exists
     # If group exists, return uid
     # If not, create group and return uid
-    jsondata = get_group_data(client, name)
 
-    if len(jsondata["objects"]) == 0:
+    objects = get_group_data(client, name)
+
+    # Filter the objects by user groups only and
+    # return the next one
+    filtered = next(filter(lambda d: d["type"] == "CpmiUserGroup", objects), None)
+
+    if filtered is None:
         # Create group
         return create_group(client, name)
     else:
         # Return existing group
-        return retrieve_uid_from_array(jsondata)
-
-
-def retrieve_uid_from_array(jsondata):
-    # Retrieve uid from array
-    for i in range(len(jsondata["objects"])):
-        obj = jsondata["objects"][i]
-        return obj["uid"]
+        return filtered["uid"]
 
 
 def assign_user_to_group(client, uuid, guid):
@@ -191,13 +193,19 @@ def action_add(client, user):
 
 def action_delete(client, user):
     # Returns the json data of the user
-    jsondata = get_user_data(client, user.name)
+    users = get_user_data(client, user.name)
+
+    # Filter the objects by CpmiUsers and the exact user name
+    # return the next one
+    filter_by_type = filter(lambda d: d["type"] == "CpmiUser", users)
+    filter_by_name = next(
+        filter(lambda d: d["name"] == user.name, filter_by_type), None
+    )
 
     # If no objects returned
     # user doesn't exist, thefore we don't enter if
-    if len(jsondata["objects"]) != 0:
-        uid = retrieve_uid_from_array(jsondata)
-        delete_user(client, uid, user.name)
+    if filter_by_name is not None:
+        delete_user(client, filter_by_name["uid"], user.name)
 
 
 def action_edit(client, user):
@@ -208,14 +216,18 @@ def action_edit(client, user):
         group = group.replace(" ", "")
 
         # Returns the json data of the group
-        jsondata = get_group_data(client, group)
+        groups = get_group_data(client, group)
+
+        # Filter the objects by user groups only and
+        # return the next one
+        filtered = next(filter(lambda d: d["type"] == "CpmiUserGroup", groups), None)
 
         # If no objects returned
         # group doesn't exist, thefore we don't enter if
-        if len(jsondata["objects"]) != 0:
+        if filtered is not None:
             # Get the user uid
             uuid = get_user(client, user.name, user.password)
-            guid = retrieve_uid_from_array(jsondata)
+            guid = filtered["uid"]
 
             remove_user_from_group(client, uuid, guid)
 
@@ -329,7 +341,7 @@ def main():
                     publish(client)
 
                     # Install the policy
-                    install_policy(client, settings)
+                    # install_policy(client, settings)
 
             except Exception as e:
                 # Prints the error message
