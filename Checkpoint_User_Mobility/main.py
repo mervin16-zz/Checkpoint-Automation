@@ -7,6 +7,7 @@ from user import User
 from settings import Settings
 import constants as Const
 from utils import create_logger
+from passlib.hash import des_crypt
 
 ######################################
 ############ Enumerators ############
@@ -42,6 +43,10 @@ def discard(client):
     response_logger(response, Const.MESSAGE_SESSION_DISCARDED)
 
 
+def hash_user_password(password):
+    return des_crypt.hash(password)
+
+
 def response_logger(response, successMessage):
     # Checks if the response is
     # successful or not
@@ -67,7 +72,7 @@ def create_user(client, name, password):
             "name": name,
             "create": "com.checkpoint.objects.classes.dummy.CpmiUser",
             "authMethod": "INTERNAL_PASSWORD",
-            "internalPassword": password,
+            "internalPassword": hash_user_password(password),
         },
     )
 
@@ -341,7 +346,7 @@ def main():
                     publish(client)
 
                     # Install the policy
-                    # install_policy(client, settings)
+                    install_policy(client, settings)
 
             except Exception as e:
                 # Prints the error message

@@ -10,6 +10,8 @@ This is a project for automating tasks in the Checkpoint Firewall Security versi
 
 ```pip install openpyxl```
 
+```pip install passlib```
+
 ```pip install --upgrade git+https://github.com/CheckPointSW/cp_mgmt_api_python_sdk```
 
 ### Running the script
