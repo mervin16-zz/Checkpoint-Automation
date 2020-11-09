@@ -133,5 +133,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Config file
+config/Flow_Extraction-Data.xlsx
+
 # Output data
 out/

@@ -54,6 +54,7 @@ class AccessRule:
         source = []
         destination = []
         service = []
+        name = None
 
         # Query all sources
         for src in response["source"]:
@@ -67,10 +68,16 @@ class AccessRule:
         for serv in response["service"]:
             service.append(serv["name"])
 
+        # Check if rule has a name
+        if "name" in response:
+            name = response["name"]
+        else:
+            name = "None"
+
         return AccessRule(
             queried_object=queried_object,
             uid=response["uid"],
-            name=response["name"],
+            name=name,
             policy=policy,
             source=source,
             destination=destination,
