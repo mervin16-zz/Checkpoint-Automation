@@ -152,4 +152,6 @@ Any changes to the sms credentials or path of the excel file should be changed i
 
 
 # License
+```
 Copyright 2020 Mervin Hemaraju
+```
