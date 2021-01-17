@@ -2,10 +2,10 @@ from cpapi import APIClient, APIClientArgs
 import pandas as pd
 from datetime import datetime
 import os
-from settings import Settings
-from flow import AccessRule, RuleIntermediator as RI
-import constants as Const
-from utils import create_logger
+from utils.settings import Settings
+from models.flow import AccessRule, RuleIntermediator as RI
+import utils.constants as Const
+from utils.utils import create_logger
 
 # TODO("Improve object searching")
 # TODO("Fix bug when comment is empty")

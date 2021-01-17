@@ -2,13 +2,13 @@ from cpapi import APIClient, APIClientArgs
 import pandas as pd
 import os
 from datetime import datetime
-from host import Host
-from network import Network
-from settings import Settings
-from cobject import Object
-from network_group import NGroup
-import constants as Const
-from utils import create_logger
+from models.host import Host
+from models.network import Network
+from utils.settings import Settings
+from models.cobject import Object
+from models.network_group import NGroup
+import utils.constants as Const
+from utils.utils import create_logger
 
 ######################################
 ########## Global Variables ##########

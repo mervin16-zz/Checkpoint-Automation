@@ -5,7 +5,7 @@ class Settings:
 
     # Initialize the Settings class
     def __init__(self):
-        with open("Checkpoint_Flow_Extraction/config/settings.json") as json_file:
+        with open("config/settings.json") as json_file:
             settings = json.load(json_file)
 
             # SMS settings

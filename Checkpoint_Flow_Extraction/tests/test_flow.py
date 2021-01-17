@@ -1,5 +1,5 @@
 import unittest
-from flow import RuleIntermediator as RI
+from models.flow import RuleIntermediator as RI
 
 
 class TestFlow(unittest.TestCase):

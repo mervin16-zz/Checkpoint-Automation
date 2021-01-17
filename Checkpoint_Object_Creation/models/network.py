@@ -1,4 +1,4 @@
-from cobject import Object
+from models.cobject import Object
 
 # DO NOT instantiate this class directly
 # Call the getInstance() or getInstanceVerification() method
