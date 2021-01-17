@@ -7,6 +7,9 @@ from flow import AccessRule, RuleIntermediator as RI
 import constants as Const
 from utils import create_logger
 
+# TODO("Improve object searching")
+# TODO("Fix bug when comment is empty")
+
 ######################################
 ########## Global Variables ##########
 ######################################
@@ -84,8 +87,7 @@ def fetch_access_rules(client, policy_rules_dict, queried_object):
         for uid in policy_rules_dict[policy]["uids"]:
 
             response = client.api_call(
-                "show-access-rule",
-                {"uid": uid, "layer": policy_rules_dict[policy]["layer"]},
+                "show-access-rule", {"uid": uid["id"], "layer": uid["layer-name"]},
             )
 
             is_success = response_checker(

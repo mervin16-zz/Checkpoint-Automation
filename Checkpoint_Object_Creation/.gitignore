@@ -133,9 +133,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# checkpoint fingerprints
-fingerprints.txt
-out.json
-
-# VS Code
-.vscode
+# Config Folder
+config/

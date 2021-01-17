@@ -9,3 +9,6 @@ fingerprints.txt
 # VS Code
 .vscode
 checkpoint_automation.code-workspace
+
+# Virtual Environment
+venv/
