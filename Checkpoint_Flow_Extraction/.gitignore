@@ -134,7 +134,7 @@ dmypy.json
 .pyre/
 
 # Config file
-config/Flow_Extraction-Data.xlsx
+config/
 
 # Output data
 out/

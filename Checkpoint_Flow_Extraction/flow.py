@@ -9,9 +9,9 @@ class RuleIntermediator:
             for a in filtered_list
         ]:
             if name in groups:
-                groups[name]["uids"].append(rule)
+                groups[name]["uids"].append({"id": rule, "layer-name": layer})
             else:
-                groups[name] = {"uids": [rule], "layer": layer}
+                groups[name] = {"uids": [{"id": rule, "layer-name": layer}]}
 
         return groups
 
