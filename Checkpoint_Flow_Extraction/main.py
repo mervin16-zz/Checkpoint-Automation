@@ -14,6 +14,7 @@ from utils.utils import create_logger
 ########## Global Variables ##########
 ######################################
 logger = None
+settings = Settings()
 
 
 ######################################
@@ -140,12 +141,10 @@ def export_rules(access_rules):
     )
 
     # Write to excel file
-    dataframe.to_excel(Const.PATH_FLOWS_EXTRACTION_OUTPUT)
+    dataframe.to_excel(settings.output_data_path)
 
     # Generate message for user
-    display(
-        Const.MESSAGE_EXTRACTION_COMPLETE.format(Const.PATH_FLOWS_EXTRACTION_OUTPUT)
-    )
+    display(Const.MESSAGE_EXTRACTION_COMPLETE.format(settings.output_data_path))
 
 
 def logger_config():
@@ -172,9 +171,6 @@ def main():
     try:
         # Logger configurations
         logger_config()
-
-        # Get settings from Settings class
-        settings = Settings()
 
         # Read data from file
         dataframe = pd.read_excel(settings.object_data_path)

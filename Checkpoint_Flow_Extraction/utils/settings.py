@@ -16,5 +16,6 @@ class Settings:
             # API settings
             self.api_version = settings["api"]["version"]
 
-            # User data settings
-            self.object_data_path = settings["object_data"]["path"]
+            # File Paths settings
+            self.object_data_path = settings["file_path"]["object_data"]
+            self.output_data_path = settings["file_path"]["output_data"]
